@@ -1,0 +1,7 @@
+Project/Library
+Project/Logs
+Project/Temp
+Project/UserSettings
+Project/.vscode
+Project/*.csproj
+Project/*.sln
