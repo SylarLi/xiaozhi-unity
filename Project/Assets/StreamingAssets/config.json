@@ -1,0 +1,4 @@
+{
+    "CONFIG_WEBSOCKET_URL": "ws://127.0.0.1:8000/ws",
+    "CONFIG_WEBSOCKET_ACCESS_TOKEN": "xxxxx"
+}

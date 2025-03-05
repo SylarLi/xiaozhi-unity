@@ -1,7 +1,14 @@
 {
   "dependencies": {
+    "com.github-glitchenzo.nugetforunity": {
+      "version": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "36d3260fdca03bf6feb105c67022d1fd7629dd2f"
+    },
     "com.unity.burst": {
-      "version": "1.8.18",
+      "version": "1.8.19",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -61,6 +68,13 @@
     "com.unity.mathematics": {
       "version": "1.2.6",
       "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "3.2.1",
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
