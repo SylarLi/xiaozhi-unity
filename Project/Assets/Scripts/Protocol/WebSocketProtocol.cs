@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using System.Text;
 using System.Net.WebSockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -16,20 +17,23 @@ public class WebSocketProtocol : Protocol
     private CancellationTokenSource _cancellationTokenSource;
     private TaskCompletionSource<bool> _helloTaskCompletionSource;
     private DateTime _lastIncomingTime;
-    private readonly byte[] _buffer = new byte[ReceiveBufferSize];
+    private Memory<byte> _buffer;
 
-    private const int SampleRate = 16000;
-    private const int Channels = 1;
-    private const int FrameDuration = 60;
-    private const int ReceiveBufferSize = 8192;
-    private const int TimeoutSeconds = 120;
+    public override void Start()
+    {
+        _buffer = new byte[8192];
+    }
 
     public override async Task<bool> OpenAudioChannel()
     {
         var url = Config.Instance.WebSocketUrl;
         var token = Config.Instance.WebSocketAccessToken;
-        var deviceId = SystemInfo.deviceUniqueIdentifier;
-        var clientId = Guid.NewGuid().ToString("N");
+        var deviceId = Context.Instance.GetMacAddress();
+        var clientId = Context.Instance.Uuid;
+        Debug.Log($"url: {url}");
+        Debug.Log($"token: {token}");
+        Debug.Log($"deviceId: {deviceId}");
+        Debug.Log($"clientId: {clientId}");
         if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(token) ||
             string.IsNullOrEmpty(deviceId) || string.IsNullOrEmpty(clientId))
         {
@@ -55,6 +59,7 @@ public class WebSocketProtocol : Protocol
             await _webSocket.ConnectAsync(new Uri(url), _cancellationTokenSource.Token);
             _isConnected = true;
             Debug.Log("WebSocket连接已打开");
+            _ = StartReceiving();
             var helloMessage = new
             {
                 type = "hello",
@@ -63,13 +68,12 @@ public class WebSocketProtocol : Protocol
                 audio_params = new
                 {
                     format = "opus",
-                    sample_rate = SampleRate,
-                    channels = Channels,
-                    frame_duration = FrameDuration
+                    sample_rate = 16000,
+                    channels = 1,
+                    frame_duration = Config.Instance.OpusFrameDurationMs
                 }
             };
             await SendJson(helloMessage);
-            _ = StartReceiving();
             await Task.WhenAny(_helloTaskCompletionSource.Task, Task.Delay(10000));
             if (_helloTaskCompletionSource.Task.IsCompletedSuccessfully) return true;
             SetError("连接失败: 连接超时");
@@ -89,7 +93,7 @@ public class WebSocketProtocol : Protocol
             while (_webSocket.State == WebSocketState.Open)
             {
                 var result = await _webSocket.ReceiveAsync(
-                    new ArraySegment<byte>(_buffer),
+                    _buffer,
                     _cancellationTokenSource.Token);
 
                 if (result.MessageType == WebSocketMessageType.Close)
@@ -98,13 +102,12 @@ public class WebSocketProtocol : Protocol
                 }
                 else if (result.MessageType == WebSocketMessageType.Binary)
                 {
-                    var messageData = new byte[result.Count];
-                    Array.Copy(_buffer, messageData, result.Count);
+                    var messageData = _buffer.Slice(0, result.Count).ToArray();
                     InvokeOnAudioData(messageData);
                 }
                 else if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    var messageText = Encoding.UTF8.GetString(_buffer, 0, result.Count);
+                    var messageText = Encoding.UTF8.GetString(_buffer.Span.Slice(0, result.Count));
                     HandleJsonMessage(messageText);
                     _lastIncomingTime = DateTime.Now;
                 }
@@ -165,7 +168,7 @@ public class WebSocketProtocol : Protocol
         var audioParams = message["audio_params"];
         if (audioParams != null)
         {
-            ServerSampleRate = audioParams["sample_rate"]?.Value<int>() ?? SampleRate;
+            ServerSampleRate = audioParams["sample_rate"]?.Value<int>() ?? 16000;
         }
 
         _isAudioChannelOpen = true;
@@ -173,14 +176,14 @@ public class WebSocketProtocol : Protocol
         InvokeOnChannelOpened();
     }
 
-    public override async Task SendAudio(byte[] audioData)
+    public override async Task SendAudio(ReadOnlyMemory<byte> audioData)
     {
         if (!_isConnected || !_isAudioChannelOpen) return;
 
         try
         {
             await _webSocket.SendAsync(
-                new ArraySegment<byte>(audioData),
+                audioData,
                 WebSocketMessageType.Binary,
                 true,
                 _cancellationTokenSource.Token);
@@ -261,7 +264,7 @@ public class WebSocketProtocol : Protocol
             return false;
         }
 
-        return (DateTime.Now - _lastIncomingTime).TotalSeconds > TimeoutSeconds;
+        return (DateTime.Now - _lastIncomingTime).TotalSeconds > 120;
     }
 
     private void SetError(string errorMessage)

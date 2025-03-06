@@ -1,10 +1,64 @@
+using System;
 using System.Threading.Tasks;
-using UnityEngine;
 using Newtonsoft.Json.Linq;
+
+public enum MessageType
+{
+    Hello,
+    Listen,
+    Abort,
+    WakeWordDetected,
+    IoT,
+    STT,
+    LLM,
+    TTS
+}
+
+public enum ListenState
+{
+    Start,
+    Stop,
+    Detect
+}
+
+public enum ListenMode
+{
+    AutoStop,
+    ManualStop,
+    AlwaysOn
+}
+
+public enum TTSState
+{
+    Start,
+    Stop,
+    SentenceStart
+}
+
+public enum AbortReason
+{
+    None,
+    WakeWordDetected
+}
+
+public enum ConnectionState
+{
+    Disconnected,
+    Connecting,
+    Connected,
+    Error
+}
+
+public enum AudioState
+{
+    Idle,
+    Listening,
+    Speaking
+}
 
 public abstract class Protocol
 {
-    public delegate void OnAudioDataReceived(byte[] data);
+    public delegate void OnAudioDataReceived(ReadOnlyMemory<byte> data);
 
     public delegate void OnJsonMessageReceived(JObject message);
 
@@ -14,8 +68,8 @@ public abstract class Protocol
 
     public delegate void OnNetworkErrorOccurred(string message);
 
-    public event OnAudioDataReceived OnAudioData;
-    public event OnJsonMessageReceived OnJsonMessage;
+    public event OnAudioDataReceived OnIncomingAudio;
+    public event OnJsonMessageReceived OnIncomingJson;
     public event OnAudioChannelClosed OnChannelClosed;
     public event OnAudioChannelOpened OnChannelOpened;
     public event OnNetworkErrorOccurred OnNetworkError;
@@ -23,11 +77,12 @@ public abstract class Protocol
     public int ServerSampleRate { get; protected set; }
     public int SessionId { get; protected set; }
 
+    public abstract void Start();
     public abstract Task<bool> OpenAudioChannel();
     public abstract Task CloseAudioChannel();
     public abstract bool IsAudioChannelOpened();
-    public abstract Task SendAudio(byte[] data);
-    
+    public abstract Task SendAudio(ReadOnlyMemory<byte> data);
+
     public virtual async Task SendAbortSpeaking(AbortReason reason)
     {
         if (reason == AbortReason.WakeWordDetected)
@@ -103,14 +158,14 @@ public abstract class Protocol
 
     protected abstract Task SendJson(object data);
 
-    protected void InvokeOnAudioData(byte[] data)
+    protected void InvokeOnAudioData(ReadOnlyMemory<byte> data)
     {
-        OnAudioData?.Invoke(data);
+        OnIncomingAudio?.Invoke(data);
     }
 
     protected void InvokeOnJsonMessage(JObject message)
     {
-        OnJsonMessage?.Invoke(message);
+        OnIncomingJson?.Invoke(message);
     }
 
     protected void InvokeOnChannelClosed()

@@ -2,15 +2,16 @@ using UnityEngine;
 
 public class Entry : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
-        Debug.Log("Hello World!");
+        App.Instance.Start();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void OnGUI()
     {
-        
+        if (GUILayout.Button("Start", GUILayout.Width(100), GUILayout.Height(50)))
+        {
+            _ = App.Instance.StartListening();
+        }
     }
 }
