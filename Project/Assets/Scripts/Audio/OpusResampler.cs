@@ -2,35 +2,40 @@ using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 
-public class OpusResampler : IDisposable
+namespace XiaoZhi.Unity
 {
-    protected int inputSampleRate;
-    public int InputSampleRate => inputSampleRate;
-
-    protected int outputSampleRate;
-    public int OutputSampleRate => outputSampleRate;
-    
-    protected IntPtr resamplerState;
-
-    public OpusResampler()
+    public class OpusResampler : IDisposable
     {
-        inputSampleRate = 0;
-        outputSampleRate = 0;
-        resamplerState = IntPtr.Zero;
-    }
+        protected int inputSampleRate;
+        public int InputSampleRate => inputSampleRate;
 
-    public void Configure(int inputSampleRate, int outputSampleRate)
-    {
-        this.inputSampleRate = inputSampleRate;
-        this.outputSampleRate = outputSampleRate;
-    } 
+        protected int outputSampleRate;
+        public int OutputSampleRate => outputSampleRate;
 
-    public void Process(ReadOnlySpan<short> input, Span<short> output) {}
+        protected IntPtr resamplerState;
 
-    public int GetOutputSamples(int inputSamples) { return 0; }
+        public OpusResampler()
+        {
+            resamplerState = IntPtr.Zero;
+        }
 
-    public void Dispose()
-    {
-        
+        public void Configure(int inputSampleRate, int outputSampleRate)
+        {
+            this.inputSampleRate = inputSampleRate;
+            this.outputSampleRate = outputSampleRate;
+        }
+
+        public void Process(ReadOnlySpan<short> input, Span<short> output)
+        {
+        }
+
+        public int GetOutputSamples(int inputSamples)
+        {
+            return inputSamples * outputSampleRate / inputSampleRate;
+        }
+
+        public void Dispose()
+        {
+        }
     }
 }

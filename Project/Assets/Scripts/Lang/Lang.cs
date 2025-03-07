@@ -4,11 +4,11 @@ using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
 
-namespace Lang
+namespace XiaoZhi.Unity.Lang
 {
     public static class Code
     {
-        public static readonly string Value = "zh-CN";
+        public const string Value = "zh-CN";
     }
 
     public static class Strings

@@ -1,0 +1,25 @@
+{
+    "version": 2,
+    "flash_size": 16777216,
+    "minimum_free_heap_size": 8318916,
+    "mac_address": "{mac}",
+    "chip_model_name": "esp32s3",
+    "chip_info": {
+        "model": 9,
+        "cores": 2,
+        "revision": 2,
+        "features": 18
+    },
+    "application": {
+        "name": "xiaozhi-unity",
+        "version": "0.0.1"
+    },
+    "partition_table": [],
+    "ota": {
+        "label": "factory"
+    },
+    "board": {
+        "type": "{board_name}",
+        "mac": "{mac}"
+    }
+}

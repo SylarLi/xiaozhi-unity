@@ -1,25 +1,30 @@
 using System;
 using System.Linq;
+using System.Net;
+using UnityEngine;
 
-public class Context
+namespace XiaoZhi.Unity
 {
-    public static Context Instance { get; } = new();
-    
-    public string Uuid { get; private set; }
-    
-    public Display Display { get; }
-    
-    public AudioCodec AudioCodec { get; }
-    
-    public Context()
+    public class Context
     {
-        Uuid = Guid.NewGuid().ToString("N");
-        Display = new UIDisplay();
-        AudioCodec = new UnityAudioCodec(Config.Instance.AudioInputSampleRate, Config.Instance.AudioOutputSampleRate, true);
-    }
-    
-    public string GetMacAddress()
-    {
+        public static Context Instance { get; } = new();
+
+        public string Uuid { get; private set; }
+
+        public Display Display { get; }
+
+        public AudioCodec AudioCodec { get; }
+
+        public Context()
+        {
+            Uuid = Guid.NewGuid().ToString("d");
+            Display = new UIDisplay();
+            AudioCodec = new UnityAudioCodec(Config.Instance.AudioInputSampleRate,
+                Config.Instance.AudioOutputSampleRate, false);
+        }
+
+        public string GetMacAddress()
+        {
 #if UNITY_ANDROID && !UNITY_EDITOR
         using (var unityPlayer = new UnityEngine.AndroidJavaClass("com.unity3d.player.UnityPlayer"))
         using (var activity = unityPlayer.GetStatic<UnityEngine.AndroidJavaObject>("currentActivity"))
@@ -42,19 +47,30 @@ public class Context
                 .Select(i => idfv.Substring(i * 2, 2)));
         }
 #else
-        var nics = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
-        foreach (var adapter in nics)
-        {
-            if (adapter.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
-                (adapter.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Ethernet ||
-                 adapter.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211))
+            var nics = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+            foreach (var adapter in nics)
             {
-                var bytes = adapter.GetPhysicalAddress().GetAddressBytes();
-                return string.Join(":", bytes.Select(b => b.ToString("x2")));
+                if (adapter.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
+                    (adapter.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Ethernet ||
+                     adapter.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211))
+                {
+                    var bytes = adapter.GetPhysicalAddress().GetAddressBytes();
+                    return string.Join(":", bytes.Select(b => b.ToString("x2")));
+                }
             }
-        }
 #endif
 
-        return string.Empty;
+            return string.Empty;
+        }
+
+        public string GetBoardName()
+        {
+            return "xiaozhi-unity";
+        }
+
+        public string GetVersion()
+        {
+            return "0.0.1";
+        }
     }
 }

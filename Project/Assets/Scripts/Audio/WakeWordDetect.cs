@@ -2,64 +2,67 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
-public abstract class WakeWordDetect : IDisposable
+namespace XiaoZhi.Unity
 {
-    protected int channels;
-    protected bool reference;
-    protected bool isDetectionRunning;
-    protected string lastDetectedWakeWord;
-    protected List<string> wakeWords;
-    protected CancellationTokenSource detectionCancellation;
-
-    public event Action<string> OnWakeWordDetected;
-    public event Action<bool> OnVadStateChanged;
-
-    protected WakeWordDetect()
+    public abstract class WakeWordDetect : IDisposable
     {
-        wakeWords = new List<string>();
-        isDetectionRunning = false;
-        lastDetectedWakeWord = string.Empty;
-    }
+        protected int channels;
+        protected bool reference;
+        protected bool isDetectionRunning;
+        protected string lastDetectedWakeWord;
+        protected List<string> wakeWords;
+        protected CancellationTokenSource detectionCancellation;
 
-    public abstract void Initialize(int channels, bool reference);
+        public event Action<string> OnWakeWordDetected;
+        public event Action<bool> OnVadStateChanged;
 
-    public abstract void Feed(ReadOnlyMemory<short> data);
+        protected WakeWordDetect()
+        {
+            wakeWords = new List<string>();
+            isDetectionRunning = false;
+            lastDetectedWakeWord = string.Empty;
+        }
 
-    public virtual void StartDetection()
-    {
-        if (isDetectionRunning) return;
-        detectionCancellation = new CancellationTokenSource();
-        isDetectionRunning = true;
-    }
+        public abstract void Initialize(int channels, bool reference);
 
-    public virtual void StopDetection()
-    {
-        if (!isDetectionRunning) return;
-        detectionCancellation?.Cancel();
-        isDetectionRunning = false;
-    }
+        public abstract void Feed(ReadOnlyMemory<short> data);
 
-    public bool IsDetectionRunning => isDetectionRunning;
+        public virtual void StartDetection()
+        {
+            if (isDetectionRunning) return;
+            detectionCancellation = new CancellationTokenSource();
+            isDetectionRunning = true;
+        }
 
-    public string LastDetectedWakeWord => lastDetectedWakeWord;
+        public virtual void StopDetection()
+        {
+            if (!isDetectionRunning) return;
+            detectionCancellation?.Cancel();
+            isDetectionRunning = false;
+        }
 
-    public abstract void EncodeWakeWordData();
+        public bool IsDetectionRunning => isDetectionRunning;
 
-    public abstract bool GetWakeWordOpus(out Memory<byte> opus);
+        public string LastDetectedWakeWord => lastDetectedWakeWord;
 
-    protected virtual void RaiseWakeWordDetected(string wakeWord)
-    {
-        OnWakeWordDetected?.Invoke(wakeWord);
-    }
+        public abstract void EncodeWakeWordData();
 
-    protected virtual void RaiseVadStateChanged(bool speaking)
-    {
-        OnVadStateChanged?.Invoke(speaking);
-    }
+        public abstract bool GetWakeWordOpus(out Memory<byte> opus);
 
-    public virtual void Dispose()
-    {
-        StopDetection();
-        detectionCancellation?.Dispose();
+        protected virtual void RaiseWakeWordDetected(string wakeWord)
+        {
+            OnWakeWordDetected?.Invoke(wakeWord);
+        }
+
+        protected virtual void RaiseVadStateChanged(bool speaking)
+        {
+            OnVadStateChanged?.Invoke(speaking);
+        }
+
+        public virtual void Dispose()
+        {
+            StopDetection();
+            detectionCancellation?.Dispose();
+        }
     }
 }

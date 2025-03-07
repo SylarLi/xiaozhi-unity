@@ -1,46 +1,49 @@
 using UnityEngine;
 
-public class Settings
+namespace XiaoZhi.Unity
 {
-    private string _namespace;
-
-    public Settings(string ns)
+    public class Settings
     {
-        _namespace = ns;
-    }
+        private string _namespace;
 
-    private string GetFullKey(string key)
-    {
-        return $"{_namespace}_{key}";
-    }
+        public Settings(string ns)
+        {
+            _namespace = ns;
+        }
 
-    public string GetString(string key, string defaultValue = "")
-    {
-        return PlayerPrefs.GetString(GetFullKey(key), defaultValue);
-    }
+        private string GetFullKey(string key)
+        {
+            return $"{_namespace}_{key}";
+        }
 
-    public void SetString(string key, string value)
-    {
-        PlayerPrefs.SetString(GetFullKey(key), value);
-    }
+        public string GetString(string key, string defaultValue = "")
+        {
+            return PlayerPrefs.GetString(GetFullKey(key), defaultValue);
+        }
 
-    public int GetInt(string key, int defaultValue = 0)
-    {
-        return PlayerPrefs.GetInt(GetFullKey(key), defaultValue);
-    }
+        public void SetString(string key, string value)
+        {
+            PlayerPrefs.SetString(GetFullKey(key), value);
+        }
 
-    public void SetInt(string key, int value)
-    {
-        PlayerPrefs.SetInt(GetFullKey(key), value);
-    }
+        public int GetInt(string key, int defaultValue = 0)
+        {
+            return PlayerPrefs.GetInt(GetFullKey(key), defaultValue);
+        }
 
-    public void EraseKey(string key)
-    {
-        PlayerPrefs.DeleteKey(GetFullKey(key));
-    }
+        public void SetInt(string key, int value)
+        {
+            PlayerPrefs.SetInt(GetFullKey(key), value);
+        }
 
-    public void Save()
-    {
-        PlayerPrefs.Save();
+        public void EraseKey(string key)
+        {
+            PlayerPrefs.DeleteKey(GetFullKey(key));
+        }
+
+        public void Save()
+        {
+            PlayerPrefs.Save();
+        }
     }
 }
