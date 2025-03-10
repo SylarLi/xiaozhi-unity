@@ -8,7 +8,7 @@ public class Entry : MonoBehaviour
     {
         App.Instance.Start();
     }
-
+    
     private void OnGUI()
     {
         if (GUILayout.Button("Boot", GUILayout.Width(100), GUILayout.Height(50)))

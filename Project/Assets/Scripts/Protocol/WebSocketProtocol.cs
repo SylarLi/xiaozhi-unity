@@ -87,21 +87,25 @@ namespace XiaoZhi.Unity
                         _buffer,
                         _cancellationTokenSource.Token);
 
-                    if (result.MessageType == WebSocketMessageType.Close)
+                    switch (result.MessageType)
                     {
-                        await HandleWebSocketClose();
-                    }
-                    else if (result.MessageType == WebSocketMessageType.Binary)
-                    {
-                        var messageData = _buffer.Slice(0, result.Count).ToArray();
-                        InvokeOnAudioData(messageData);
-                    }
-                    else if (result.MessageType == WebSocketMessageType.Text)
-                    {
-                        var messageText = Encoding.UTF8.GetString(_buffer.Span.Slice(0, result.Count));
-                        Debug.Log($"Incoming json: {messageText}");
-                        HandleJsonMessage(messageText);
-                        _lastIncomingTime = DateTime.Now;
+                        case WebSocketMessageType.Close:
+                            await HandleWebSocketClose();
+                            break;
+                        case WebSocketMessageType.Binary:
+                        {
+                            var messageData = _buffer.Slice(0, result.Count).ToArray();
+                            InvokeOnAudioData(messageData);
+                            break;
+                        }
+                        case WebSocketMessageType.Text:
+                        {
+                            var messageText = Encoding.UTF8.GetString(_buffer.Span.Slice(0, result.Count));
+                            Debug.Log($"Incoming json: {messageText}");
+                            HandleJsonMessage(messageText);
+                            _lastIncomingTime = DateTime.Now;
+                            break;
+                        }
                     }
                 }
             }

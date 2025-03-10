@@ -75,13 +75,13 @@ namespace XiaoZhi.Unity
                 var leftLen = _playbackBufferSize - _playbackReadPosition;
                 if (readLen > leftLen)
                 {
-                    Buffer.BlockCopy(_playbackBuffer, _playbackReadPosition, data, dataOffset, leftLen);
+                    Array.Copy(_playbackBuffer, _playbackReadPosition, data, dataOffset, leftLen);
                     _playbackReadPosition = 0;
                     readLen -= leftLen;
                     dataOffset += leftLen;
                 }
 
-                Buffer.BlockCopy(_playbackBuffer, _playbackReadPosition, data, dataOffset, readLen);
+                Array.Copy(_playbackBuffer, _playbackReadPosition, data, dataOffset, readLen);
                 _playbackReadPosition += readLen;
             }
 
@@ -94,9 +94,9 @@ namespace XiaoZhi.Unity
                 return 0;
             var samples = data.Length;
             var position = _playbackEndPosition;
+            _playbackEndPosition = (position + samples) % _playbackBufferSize;
             for (var i = 0; i < samples; i++)
                 _playbackBuffer[(position + i) % _playbackBufferSize] = data[i] / (float)short.MaxValue;
-            _playbackEndPosition = (position + samples) % _playbackBufferSize;
             _isPlaying = true;
             return samples;
         }
