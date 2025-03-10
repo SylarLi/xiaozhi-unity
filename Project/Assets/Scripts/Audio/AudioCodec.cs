@@ -37,6 +37,10 @@ namespace XiaoZhi.Unity
         {
         }
 
+        public virtual void Update()
+        {
+        }
+
         public virtual void SetOutputVolume(int volume)
         {
             outputVolume = volume;

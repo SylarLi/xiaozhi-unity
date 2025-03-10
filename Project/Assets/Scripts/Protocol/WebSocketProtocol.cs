@@ -38,53 +38,43 @@ namespace XiaoZhi.Unity
             if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(token) ||
                 string.IsNullOrEmpty(deviceId) || string.IsNullOrEmpty(clientId))
             {
-                SetError("连接失败: 请检查配置");
-                return false;
+                throw new InvalidOperationException("连接失败: 请检查配置");
             }
 
             await CloseWebSocket();
 
-            try
+            _webSocket = new ClientWebSocket();
+            _cancellationTokenSource = new CancellationTokenSource();
+            _helloTaskCompletionSource = new TaskCompletionSource<bool>();
+
+            // 设置请求头
+            _webSocket.Options.SetRequestHeader("Authorization", $"Bearer {token}");
+            _webSocket.Options.SetRequestHeader("Protocol-Version", "1");
+            _webSocket.Options.SetRequestHeader("Device-Id", deviceId);
+            _webSocket.Options.SetRequestHeader("Client-Id", clientId);
+
+            // 异步连接
+            await _webSocket.ConnectAsync(new Uri(url), _cancellationTokenSource.Token);
+            _isConnected = true;
+            Debug.Log("WebSocket连接已打开");
+            _ = StartReceiving();
+            var helloMessage = new
             {
-                _webSocket = new ClientWebSocket();
-                _cancellationTokenSource = new CancellationTokenSource();
-                _helloTaskCompletionSource = new TaskCompletionSource<bool>();
-
-                // 设置请求头
-                _webSocket.Options.SetRequestHeader("Authorization", $"Bearer {token}");
-                _webSocket.Options.SetRequestHeader("Protocol-Version", "1");
-                _webSocket.Options.SetRequestHeader("Device-Id", deviceId);
-                _webSocket.Options.SetRequestHeader("Client-Id", clientId);
-
-                // 异步连接
-                await _webSocket.ConnectAsync(new Uri(url), _cancellationTokenSource.Token);
-                _isConnected = true;
-                Debug.Log("WebSocket连接已打开");
-                _ = StartReceiving();
-                var helloMessage = new
+                type = "hello",
+                version = 1,
+                transport = "websocket",
+                audio_params = new
                 {
-                    type = "hello",
-                    version = 1,
-                    transport = "websocket",
-                    audio_params = new
-                    {
-                        format = "opus",
-                        sample_rate = 16000,
-                        channels = 1,
-                        frame_duration = Config.Instance.OpusFrameDurationMs
-                    }
-                };
-                await SendJson(helloMessage);
-                await Task.WhenAny(_helloTaskCompletionSource.Task, Task.Delay(10000));
-                if (_helloTaskCompletionSource.Task.IsCompletedSuccessfully) return true;
-                SetError("连接失败: 连接超时");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                InvokeOnNetworkError($"连接失败: {ex.Message}");
-                return false;
-            }
+                    format = "opus",
+                    sample_rate = 16000,
+                    channels = 1,
+                    frame_duration = Config.Instance.OpusFrameDurationMs
+                }
+            };
+            await SendJson(helloMessage);
+            await Task.WhenAny(_helloTaskCompletionSource.Task, Task.Delay(10000));
+            if (_helloTaskCompletionSource.Task.IsCompletedSuccessfully) return true;
+            throw new TimeoutException("连接失败: 连接超时");
         }
 
         private async Task StartReceiving()
@@ -178,41 +168,26 @@ namespace XiaoZhi.Unity
             InvokeOnChannelOpened();
         }
 
-        public override async Task SendAudio(ReadOnlyMemory<byte> audioData)
-        {
-            if (!_isConnected || !_isAudioChannelOpen) return;
-
-            try
-            {
-                await _webSocket.SendAsync(
-                    audioData,
-                    WebSocketMessageType.Binary,
-                    true,
-                    _cancellationTokenSource.Token);
-            }
-            catch (Exception e)
-            {
-                InvokeOnNetworkError($"发送音频数据失败: {e.Message}");
-            }
-        }
-
         protected override async Task SendJson(object data)
         {
-            if (!_isConnected) return;
-            try
-            {
-                var jsonStr = JsonConvert.SerializeObject(data);
-                var bytes = Encoding.UTF8.GetBytes(jsonStr);
-                await _webSocket.SendAsync(
-                    new ArraySegment<byte>(bytes),
-                    WebSocketMessageType.Text,
-                    true,
-                    _cancellationTokenSource.Token);
-            }
-            catch (Exception e)
-            {
-                InvokeOnNetworkError($"发送JSON消息失败: {e.Message}");
-            }
+            if (!_isConnected) throw new InvalidOperationException("WebSocket is not connected");
+            var jsonStr = JsonConvert.SerializeObject(data);
+            var bytes = Encoding.UTF8.GetBytes(jsonStr);
+            await _webSocket.SendAsync(
+                new ArraySegment<byte>(bytes),
+                WebSocketMessageType.Text,
+                true,
+                _cancellationTokenSource.Token);
+        }
+
+        public override async Task SendAudio(ReadOnlyMemory<byte> audioData)
+        {
+            if (!_isConnected || !_isAudioChannelOpen) throw new InvalidOperationException("Audio channel is not open");
+            await _webSocket.SendAsync(
+                audioData,
+                WebSocketMessageType.Binary,
+                true,
+                _cancellationTokenSource.Token);
         }
 
         public override async Task CloseAudioChannel()

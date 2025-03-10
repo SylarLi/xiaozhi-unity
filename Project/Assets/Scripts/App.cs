@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace XiaoZhi.Unity
 {
@@ -45,7 +44,6 @@ namespace XiaoZhi.Unity
 
         // 音频编解码相关字段
         private DateTime _lastOutputTime;
-        private ConcurrentQueue<ReadOnlyMemory<byte>> _audioDecodeQueue = new();
         private OpusEncoder _opusEncoder;
         private OpusDecoder _opusDecoder;
         private int _opusDecodeSampleRate = -1;
@@ -79,10 +77,20 @@ namespace XiaoZhi.Unity
 
         public void Update()
         {
-            if (_deviceState == DeviceState.Listening)
-                InputAudio();
-            else if (_deviceState == DeviceState.Speaking)
-                OutputAudio();
+            var codec = Context.Instance.AudioCodec;
+            switch (_deviceState)
+            {
+                case DeviceState.Listening:
+                    InputAudio();
+                    break;
+                case DeviceState.Idle:
+                    var duration = (DateTime.Now - _lastOutputTime).TotalSeconds;
+                    const int maxSilenceSeconds = 10;
+                    if (duration > maxSilenceSeconds) codec.EnableOutput(false);
+                    break;
+            }
+
+            Context.Instance.AudioCodec.Update();
         }
 
         public void Dispose()
@@ -162,7 +170,44 @@ namespace XiaoZhi.Unity
             await _protocol.SendAbortSpeaking(reason);
         }
 
-        // public void ToggleChatState();
+        public async Task ToggleChatState()
+        {
+            if (_deviceState == DeviceState.Activating)
+            {
+                await SetDeviceState(DeviceState.Idle);
+                return;
+            }
+
+            if (_protocol == null)
+            {
+                Debug.Log("Protocol not initialized");
+                return;
+            }
+
+            switch (_deviceState)
+            {
+                case DeviceState.Idle:
+                    Schedule(async () =>
+                    {
+                        await SetDeviceState(DeviceState.Connecting);
+                        if (!await _protocol.OpenAudioChannel())
+                        {
+                            return;
+                        }
+
+                        _keepListening = true;
+                        await _protocol.SendStartListening(ListenMode.AutoStop);
+                        await SetDeviceState(DeviceState.Listening);
+                    });
+                    break;
+                case DeviceState.Speaking:
+                    Schedule(async () => { await AbortSpeaking(AbortReason.None); });
+                    break;
+                case DeviceState.Listening:
+                    Schedule(async () => { await _protocol.CloseAudioChannel(); });
+                    break;
+            }
+        }
 
         public async Task StartListening()
         {
@@ -273,50 +318,33 @@ namespace XiaoZhi.Unity
             }
         }
 
-        private void OutputAudio()
+        private void OutputAudio(ReadOnlyMemory<byte> opus)
         {
-            var now = DateTime.Now;
-            var codec = Context.Instance.AudioCodec;
-            const int maxSilenceSeconds = 10;
-            if (!_audioDecodeQueue.TryPeek(out _))
-            {
-                if (_deviceState != DeviceState.Idle) return;
-                var duration = (now - _lastOutputTime).TotalSeconds;
-                if (duration > maxSilenceSeconds) codec.EnableOutput(false);
-                return;
-            }
-
             if (_deviceState == DeviceState.Listening)
-            {
-                _audioDecodeQueue.Clear();
                 return;
+            _lastOutputTime = DateTime.Now;
+            // Schedule(() =>
+            // {
+            //     
+            // }, AppTaskType.Background);
+            if (_aborted)
+                return;
+            if (!_opusDecoder.Decode(opus.Span, out var pcm))
+                return;
+            var codec = Context.Instance.AudioCodec;
+            if (_opusDecodeSampleRate != codec.OutputSampleRate)
+            {
+                var resampled = new short[_outputResampler.GetOutputSamples(pcm.Length)];
+                _inputResampler.Process(pcm.Span, resampled.AsSpan());
+                pcm = resampled;
             }
 
-            _lastOutputTime = now;
-            if (!_audioDecodeQueue.TryDequeue(out var opus))
-                return;
-
-            Schedule(() =>
-            {
-                if (_aborted)
-                    return;
-                if (!_opusDecoder.Decode(opus.Span, out var pcm))
-                    return;
-                if (_opusDecodeSampleRate != codec.OutputSampleRate)
-                {
-                    var resampled = new short[_outputResampler.GetOutputSamples(pcm.Length)];
-                    _inputResampler.Process(pcm.Span, resampled.AsSpan());
-                    pcm = resampled;
-                }
-
-                codec.OutputData(pcm.Span);
-            }, AppTaskType.Background);
+            codec.OutputData(pcm.Span);
         }
 
         private void ResetDecoder()
         {
             _opusDecoder.ResetState();
-            _audioDecodeQueue.Clear();
             _lastOutputTime = DateTime.Now;
         }
 
@@ -338,7 +366,7 @@ namespace XiaoZhi.Unity
             Alert(Lang.Strings.ACTIVATION, _ota.ActivationMessage, "happy");
             await Task.Delay(1000);
         }
-        
+
         // private void OnClockTimer();
         // private void PlayLocalFile(byte[] data);
 
@@ -420,7 +448,7 @@ namespace XiaoZhi.Unity
             var codec = Context.Instance.AudioCodec;
             _protocol = new WebSocketProtocol();
             _protocol.OnNetworkError += (error) => { Alert(Lang.Strings.ERROR, error, "sad"); };
-            _protocol.OnIncomingAudio += (data) => { _audioDecodeQueue.Enqueue(data); };
+            _protocol.OnIncomingAudio += OutputAudio;
             _protocol.OnChannelOpened += () =>
             {
                 if (_protocol.ServerSampleRate != codec.OutputSampleRate)
@@ -441,6 +469,10 @@ namespace XiaoZhi.Unity
                 var type = message["type"].ToString();
                 switch (type)
                 {
+                    case "hello":
+                    {
+                        break;
+                    }
                     case "tts":
                     {
                         var state = message["state"].ToString();

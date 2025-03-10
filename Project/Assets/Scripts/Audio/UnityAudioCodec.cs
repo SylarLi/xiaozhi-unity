@@ -49,6 +49,20 @@ namespace XiaoZhi.Unity
             _deviceName = Microphone.devices[^1];
         }
 
+        public override void Update()
+        {
+            switch (_isPlaying)
+            {
+                case true when !_audioSource.isPlaying:
+                    _audioSource.volume = outputVolume / 100f;
+                    _audioSource.Play();
+                    break;
+                case false when _audioSource.isPlaying:
+                    _audioSource.Stop();
+                    break;
+            }
+        }
+
         private void OnAudioRead(float[] data)
         {
             var readLen = Mathf.Min(data.Length,
@@ -83,13 +97,7 @@ namespace XiaoZhi.Unity
             for (var i = 0; i < samples; i++)
                 _playbackBuffer[(position + i) % _playbackBufferSize] = data[i] / (float)short.MaxValue;
             _playbackEndPosition = (position + samples) % _playbackBufferSize;
-            if (!_isPlaying)
-            {
-                _audioSource.volume = outputVolume / 100f;
-                _audioSource.Play();
-                _isPlaying = true;
-            }
-
+            _isPlaying = true;
             return samples;
         }
 
@@ -98,7 +106,6 @@ namespace XiaoZhi.Unity
             if (outputEnabled == enable) return;
             if (!enable)
             {
-                _audioSource.Stop();
                 _isPlaying = false;
                 _playbackReadPosition = 0;
                 _playbackEndPosition = 0;

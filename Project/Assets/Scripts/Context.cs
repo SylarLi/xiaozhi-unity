@@ -21,6 +21,7 @@ namespace XiaoZhi.Unity
             Display = new UIDisplay();
             AudioCodec = new UnityAudioCodec(Config.Instance.AudioInputSampleRate,
                 Config.Instance.AudioOutputSampleRate, false);
+            Application.runInBackground = true;
         }
 
         public string GetMacAddress()
