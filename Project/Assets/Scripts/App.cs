@@ -22,7 +22,7 @@ namespace XiaoZhi.Unity
 
     public enum AppTaskType
     {
-        Main,
+        Default,
         Background
     }
 
@@ -35,7 +35,7 @@ namespace XiaoZhi.Unity
         private AudioProcessor _audioProcessor;
 
         // 系统状态相关字段
-        private Dictionary<AppTaskType, Task> _taskMap = new();
+        private readonly Dictionary<AppTaskType, Task> _taskMap;
         private Protocol _protocol;
         private DeviceState _deviceState = DeviceState.Unknown;
         private bool _keepListening;
@@ -56,7 +56,7 @@ namespace XiaoZhi.Unity
         public DeviceState GetDeviceState() => _deviceState;
         public bool IsVoiceDetected() => _voiceDetected;
 
-        public App()
+        private App()
         {
             _taskMap = new Dictionary<AppTaskType, Task>();
             foreach (AppTaskType task in Enum.GetValues(typeof(AppTaskType)))
@@ -90,14 +90,14 @@ namespace XiaoZhi.Unity
                     break;
             }
 
-            Context.Instance.AudioCodec.Update();
+            codec.Update();
         }
 
         public void Dispose()
         {
         }
 
-        public async Task SetDeviceState(DeviceState state)
+        private async Task SetDeviceState(DeviceState state)
         {
             if (_deviceState == state) return;
             _deviceState = state;
@@ -144,17 +144,12 @@ namespace XiaoZhi.Unity
             }
         }
 
-        public void Schedule(Func<Task> callback, AppTaskType taskType = AppTaskType.Main)
+        private void Schedule(Func<Task> callback, AppTaskType taskType = AppTaskType.Default)
         {
             SetTask(taskType, Task.WhenAll(GetTask(taskType), Task.Run(callback)));
         }
 
-        public void Schedule(Action callback, AppTaskType taskType = AppTaskType.Main)
-        {
-            SetTask(taskType, Task.WhenAll(GetTask(taskType), Task.Run(callback)));
-        }
-
-        public void Alert(string status, string message, string emotion = null)
+        private void Alert(string status, string message, string emotion = null)
         {
             var display = Context.Instance.Display;
             display.SetStatus(status);
@@ -163,7 +158,7 @@ namespace XiaoZhi.Unity
             Debug.Log("Alert: " + status + " " + message + " " + emotion);
         }
 
-        public async Task AbortSpeaking(AbortReason reason)
+        private async Task AbortSpeaking(AbortReason reason)
         {
             Debug.Log("Abort speaking");
             _aborted = true;
@@ -323,23 +318,21 @@ namespace XiaoZhi.Unity
             if (_deviceState == DeviceState.Listening)
                 return;
             _lastOutputTime = DateTime.Now;
-            // Schedule(() =>
-            // {
-            //     
-            // }, AppTaskType.Background);
-            if (_aborted)
-                return;
-            if (!_opusDecoder.Decode(opus.Span, out var pcm))
-                return;
-            var codec = Context.Instance.AudioCodec;
-            if (_opusDecodeSampleRate != codec.OutputSampleRate)
+            Schedule(() =>
             {
-                var resampled = new short[_outputResampler.GetOutputSamples(pcm.Length)];
-                _inputResampler.Process(pcm.Span, resampled.AsSpan());
-                pcm = resampled;
-            }
+                if (_aborted) return Task.CompletedTask;
+                if (!_opusDecoder.Decode(opus.Span, out var pcm)) return Task.CompletedTask;
+                var codec = Context.Instance.AudioCodec;
+                if (_opusDecodeSampleRate != codec.OutputSampleRate)
+                {
+                    var resampled = new short[_outputResampler.GetOutputSamples(pcm.Length)];
+                    _inputResampler.Process(pcm.Span, resampled.AsSpan());
+                    pcm = resampled;
+                }
 
-            codec.OutputData(pcm.Span);
+                codec.OutputData(pcm.Span);
+                return Task.CompletedTask;
+            }, AppTaskType.Background);
         }
 
         private void ResetDecoder()
@@ -376,12 +369,8 @@ namespace XiaoZhi.Unity
             _audioProcessor.Initialize(codec.InputChannels, codec.InputReference);
             _audioProcessor.OnOutputData += data =>
             {
-                Schedule(() =>
-                {
-                    _opusEncoder.Encode(data.Span,
-                        opus => { Schedule(async () => { await _protocol.SendAudio(opus); }); });
-                    return Task.CompletedTask;
-                }, AppTaskType.Background);
+                _opusEncoder.Encode(data.Span,
+                    opus => { Schedule(async () => { await _protocol.SendAudio(opus); }); });
             };
 
             _wakeWordDetect.Initialize(codec.InputChannels, codec.InputReference);

@@ -11,17 +11,19 @@ namespace XiaoZhi.Unity
 
         private static Config LoadConfig()
         {
-            var configPath = Path.Combine(UnityEngine.Application.streamingAssetsPath, "config.json");
-            if (!File.Exists(configPath)) throw new InvalidDataException("配置文件不存在：" + configPath);
-            var jsonContent = File.ReadAllText(configPath);
+            const string configPath = "config.json";
+            if (!ResourceLoader.FileExists(ResourceLoader.ResourceType.StreamingAssets, configPath))
+                throw new InvalidDataException("配置文件不存在：" + configPath);
+            var jsonContent = ResourceLoader.ReadAllText(ResourceLoader.ResourceType.StreamingAssets, configPath);
             return JsonConvert.DeserializeObject<Config>(jsonContent);
         }
 
         public static string BuildOTAPostData(string macAddress, string boardName)
         {
-            var configPath = Path.Combine(UnityEngine.Application.streamingAssetsPath, "ota.json");
-            if (!File.Exists(configPath)) throw new InvalidDataException("配置文件不存在：" + configPath);
-            var content = File.ReadAllText(configPath);
+            const string configPath = "ota.json";
+            if (!ResourceLoader.FileExists(ResourceLoader.ResourceType.StreamingAssets, configPath))
+                throw new InvalidDataException("配置文件不存在：" + configPath);
+            var content = ResourceLoader.ReadAllText(ResourceLoader.ResourceType.StreamingAssets, configPath);
             content = content.Replace("{mac}", macAddress);
             content = content.Replace("{board_name}", boardName);
             return content;
@@ -35,8 +37,7 @@ namespace XiaoZhi.Unity
         [JsonProperty("OPUS_FRAME_DURATION_MS")]
         public int OpusFrameDurationMs { get; set; }
 
-        [JsonProperty("USE_AUDIO_PROCESSING")]
-        public bool UseAudioProcessing { get; set; }
+        [JsonProperty("USE_AUDIO_PROCESSING")] public bool UseAudioProcessing { get; set; }
 
         [JsonProperty("AUDIO_INPUT_SAMPLE_RATE")]
         public int AudioInputSampleRate { get; set; }
@@ -44,13 +45,11 @@ namespace XiaoZhi.Unity
         [JsonProperty("AUDIO_OUTPUT_SAMPLE_RATE")]
         public int AudioOutputSampleRate { get; set; }
 
-        [JsonProperty("USE_WAKE_WORD_DETECT")]
-        public bool UseWakeWordDetect { get; set; }
-        
+        [JsonProperty("USE_WAKE_WORD_DETECT")] public bool UseWakeWordDetect { get; set; }
+
         [JsonProperty("AUDIO_INPUT_RESAMPLE_RATE")]
         public int AudioInputResampleRate { get; set; }
-        
-        [JsonProperty("OTA_VERSION_URL")]
-        public string OtaVersionUrl { get; set; }
+
+        [JsonProperty("OTA_VERSION_URL")] public string OtaVersionUrl { get; set; }
     }
 }

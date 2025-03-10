@@ -33,12 +33,8 @@ namespace XiaoZhi.Unity
         {
             var wifiInfo = wifiManager.Call<UnityEngine.AndroidJavaObject>("getConnectionInfo");
             var macAddress = wifiInfo.Call<string>("getMacAddress");
-            
-            // 确保格式正确
             if (!string.IsNullOrEmpty(macAddress))
-            {
                 return macAddress.ToLower();
-            }
         }
 #elif UNITY_IOS && !UNITY_EDITOR
         var idfv = UnityEngine.iOS.Device.vendorIdentifier;
