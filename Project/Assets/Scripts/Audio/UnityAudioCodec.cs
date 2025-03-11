@@ -6,12 +6,13 @@ namespace XiaoZhi.Unity
 {
     public class UnityAudioCodec : AudioCodec
     {
-        private const int RecordingBufferSec = 3;
-        private const int PlayingBufferSec = 3;
+        private const int RecordingBufferSec = 4;
+        private const int PlayingBufferSec = 4;
 
         private readonly AudioSource _audioSource;
         private AudioClip _recordingClip;
-        private readonly float[] _recordingBuffer;
+        private float[] _recordingBuffer;
+        private readonly int _recordingBufferSize;
         private int _recordingPosition;
         private readonly float[] _playbackBuffer;
         private int _playbackEndPosition;
@@ -29,21 +30,16 @@ namespace XiaoZhi.Unity
             duplex = true;
             _audioSource = new GameObject(GetType().Name).AddComponent<AudioSource>();
             Object.DontDestroyOnLoad(_audioSource.gameObject);
-            _recordingBuffer = new float[inputSampleRate * RecordingBufferSec * inputChannels];
-
-            // 初始化播放缓冲区
+            _recordingBufferSize = inputSampleRate * RecordingBufferSec * inputChannels;
             _playbackBufferSize = outputSampleRate * PlayingBufferSec;
             _playbackBuffer = new float[_playbackBufferSize];
             _playbackEndPosition = 0;
             _playbackReadPosition = 0;
             _isPlaying = false;
-
-            // 创建用于流式播放的AudioClip
             var playbackClip = AudioClip.Create("StreamPlayback", _playbackBufferSize, outputChannels, outputSampleRate,
                 true, OnAudioRead);
             _audioSource.clip = playbackClip;
             _audioSource.loop = true;
-
             if (Microphone.devices.Length == 0)
                 throw new NotSupportedException("没有可用的录音设备");
             _deviceName = Microphone.devices[^1];
@@ -118,54 +114,25 @@ namespace XiaoZhi.Unity
         {
             if (!inputEnabled || !Microphone.IsRecording(_deviceName))
                 return 0;
-
-            // 获取录音数据
             var position = Microphone.GetPosition(_deviceName);
             if (position < 0) return 0;
-            // 处理position归零的情况
+            _recordingBuffer ??= new float[dest.Length];
+            if (_recordingBuffer.Length != dest.Length) Array.Resize(ref _recordingBuffer, dest.Length);
+            var firstRead = 0;
             if (position < _recordingPosition)
             {
-                // 先读取从当前位置到缓冲区末尾的数据
-                var remainingSamples = _recordingBuffer.Length - _recordingPosition;
-                var firstPartSamples = Math.Min(dest.Length, remainingSamples);
+                firstRead = Math.Min(dest.Length, _recordingBufferSize - _recordingPosition);
                 _recordingClip.GetData(_recordingBuffer, _recordingPosition);
-
-                for (var i = 0; i < firstPartSamples; i++)
-                {
-                    dest[i] = (short)(_recordingBuffer[i] * short.MaxValue);
-                }
-
-                // 如果dest还有空间，从缓冲区开始位置继续读取
-                if (firstPartSamples < dest.Length && position > 0)
-                {
-                    var secondPartSamples = Math.Min(dest.Length - firstPartSamples, position);
-                    _recordingClip.GetData(_recordingBuffer, 0);
-
-                    for (var i = 0; i < secondPartSamples; i++)
-                    {
-                        dest[firstPartSamples + i] = (short)(_recordingBuffer[i] * short.MaxValue);
-                    }
-
-                    _recordingPosition = secondPartSamples;
-                    return firstPartSamples + secondPartSamples;
-                }
-
+                for (var i = 0; i < firstRead; i++) dest[i] = (short)(_recordingBuffer[i] * short.MaxValue);
                 _recordingPosition = 0;
-                return firstPartSamples;
             }
 
-            // 正常情况下读取数据
-            var samplesToRead = Math.Min(dest.Length, position - _recordingPosition);
-            if (samplesToRead <= 0) return 0;
-
+            var samplesToRead = Math.Min(dest.Length - firstRead, position - _recordingPosition);
+            if (samplesToRead <= 0) return firstRead;
             _recordingClip.GetData(_recordingBuffer, _recordingPosition);
-            for (var i = 0; i < samplesToRead; i++)
-            {
-                dest[i] = (short)(_recordingBuffer[i] * short.MaxValue);
-            }
-
-            _recordingPosition = (_recordingPosition + samplesToRead) % _recordingBuffer.Length;
-            return samplesToRead;
+            for (var i = 0; i < samplesToRead; i++) dest[i + firstRead] = (short)(_recordingBuffer[i] * short.MaxValue);
+            _recordingPosition += samplesToRead;
+            return firstRead + samplesToRead;
         }
 
         public override void EnableInput(bool enable)

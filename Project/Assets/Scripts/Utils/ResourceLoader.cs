@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Networking;
 
 namespace XiaoZhi.Unity
 {
@@ -25,7 +24,12 @@ namespace XiaoZhi.Unity
             /// <summary>
             /// 数据目录
             /// </summary>
-            DataPath
+            DataPath,
+
+            /// <summary>
+            /// Resources目录
+            /// </summary>
+            Resources
         }
 
         /// <summary>
@@ -45,6 +49,8 @@ namespace XiaoZhi.Unity
                     return Path.Combine(Application.streamingAssetsPath, relativePath);
                 case ResourceType.DataPath:
                     return Path.Combine(Application.persistentDataPath, relativePath);
+                case ResourceType.Resources:
+                    return relativePath;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -62,10 +68,10 @@ namespace XiaoZhi.Unity
             {
                 case ResourceType.StreamingAssets:
 #if UNITY_ANDROID && !UNITY_EDITOR
-                    var request = UnityWebRequest.Get(GetFullPath(type, relativePath));
+                    var request = UnityEngine.Networking.UnityWebRequest.Get(GetFullPath(type, relativePath));
                     request.SendWebRequest();
                     while (!request.isDone) { }
-                    if (request.result != UnityWebRequest.Result.Success) 
+                    if (request.result != UnityEngine.Networking.UnityWebRequest.Result.Success) 
                         throw new IOException($"读取文件失败: {request.error}");
                     return request.downloadHandler.text;
 #else
@@ -73,6 +79,11 @@ namespace XiaoZhi.Unity
 #endif
                 case ResourceType.DataPath:
                     return File.ReadAllText(GetFullPath(type, relativePath));
+                case ResourceType.Resources:
+                    var asset = Resources.Load<TextAsset>(relativePath);
+                    var text = asset?.text;
+                    Resources.UnloadAsset(asset);
+                    return text;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -90,9 +101,9 @@ namespace XiaoZhi.Unity
             {
                 case ResourceType.StreamingAssets:
 #if UNITY_ANDROID && !UNITY_EDITOR
-                    var request = UnityWebRequest.Get(GetFullPath(type, relativePath));
+                    var request = UnityEngine.Networking.UnityWebRequest.Get(GetFullPath(type, relativePath));
                     await request.SendWebRequest();
-                    if (request.result != UnityWebRequest.Result.Success) 
+                    if (request.result != UnityEngine.Networking.UnityWebRequest.Result.Success) 
                         throw new IOException($"读取文件失败: {request.error}");
                     return request.downloadHandler.text;
 #else
@@ -100,6 +111,11 @@ namespace XiaoZhi.Unity
 #endif
                 case ResourceType.DataPath:
                     return await File.ReadAllTextAsync(GetFullPath(type, relativePath));
+                case ResourceType.Resources:
+                    var asset = await Resources.LoadAsync<TextAsset>(relativePath) as TextAsset;
+                    var text = asset?.text;
+                    Resources.UnloadAsset(asset);
+                    return text;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -117,10 +133,10 @@ namespace XiaoZhi.Unity
             {
                 case ResourceType.StreamingAssets:
 #if UNITY_ANDROID && !UNITY_EDITOR
-                    var request = UnityWebRequest.Get(GetFullPath(type, relativePath));
+                    var request = UnityEngine.Networking.UnityWebRequest.Get(GetFullPath(type, relativePath));
                     request.SendWebRequest();
                     while (!request.isDone) { }
-                    if (request.result != UnityWebRequest.Result.Success) 
+                    if (request.result != UnityEngine.Networking.UnityWebRequest.Result.Success) 
                         throw new IOException($"读取文件失败: {request.error}");
                     return request.downloadHandler.data;
 #else
@@ -128,6 +144,11 @@ namespace XiaoZhi.Unity
 #endif
                 case ResourceType.DataPath:
                     return File.ReadAllBytes(GetFullPath(type, relativePath));
+                case ResourceType.Resources:
+                    var asset = Resources.Load<TextAsset>(relativePath);
+                    var bytes = asset?.bytes;
+                    Resources.UnloadAsset(asset);
+                    return bytes;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -145,9 +166,9 @@ namespace XiaoZhi.Unity
             {
                 case ResourceType.StreamingAssets:
 #if UNITY_ANDROID && !UNITY_EDITOR
-                    var request = UnityWebRequest.Get(GetFullPath(type, relativePath));
+                    var request = UnityEngine.Networking.UnityWebRequest.Get(GetFullPath(type, relativePath));
                     await request.SendWebRequest();
-                    if (request.result != UnityWebRequest.Result.Success) 
+                    if (request.result != UnityEngine.Networking.UnityWebRequest.Result.Success) 
                         throw new IOException($"读取文件失败: {request.error}");
                     return request.downloadHandler.data;
 #else
@@ -155,6 +176,11 @@ namespace XiaoZhi.Unity
 #endif
                 case ResourceType.DataPath:
                     return await File.ReadAllBytesAsync(GetFullPath(type, relativePath));
+                case ResourceType.Resources:
+                    var asset = await Resources.LoadAsync<TextAsset>(relativePath) as TextAsset;
+                    var bytes = asset?.bytes;
+                    Resources.UnloadAsset(asset);
+                    return bytes;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -192,6 +218,8 @@ namespace XiaoZhi.Unity
 #endif
                 case ResourceType.DataPath:
                     return File.Exists(GetFullPath(type, relativePath));
+                case ResourceType.Resources:
+                    throw new NotSupportedException();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }

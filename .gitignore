@@ -9,3 +9,4 @@ Project/.idea
 Project/obj
 .vscode
 Project/Project.sln.DotSettings.user
+Plugins/android-aec-lib/.gradle

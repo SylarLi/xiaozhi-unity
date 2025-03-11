@@ -30,7 +30,7 @@ namespace XiaoZhi.Unity
             _encoder = IntPtr.Zero;
         }
 
-        public unsafe bool Encode(ReadOnlySpan<short> pcm, Action<ReadOnlyMemory<byte>> handler)
+        public bool Encode(ReadOnlySpan<short> pcm, Action<ReadOnlyMemory<byte>> handler)
         {
             if (_encoder == IntPtr.Zero)
             {
@@ -47,9 +47,13 @@ namespace XiaoZhi.Unity
             {
                 var opus = new byte[MaxOpusPacketSize];
                 int encodedBytes;
-                fixed (short* inPtr = _inBuffer.Span)
-                fixed (byte* outPtr = opus)
-                    encodedBytes = OpusWrapper.opus_encode(_encoder, inPtr, _frameSize, (char*)outPtr, opus.Length);
+                unsafe
+                {
+                    fixed (short* inPtr = _inBuffer.Span)
+                    fixed (byte* outPtr = opus)
+                        encodedBytes = OpusWrapper.opus_encode(_encoder, inPtr, _frameSize, (char*)outPtr, opus.Length);
+                }
+
                 if (encodedBytes < 0)
                     throw new Exception("OpusWrapper.opus_encode error: " + encodedBytes);
                 handler?.Invoke(new ReadOnlyMemory<byte>(opus, 0, encodedBytes));

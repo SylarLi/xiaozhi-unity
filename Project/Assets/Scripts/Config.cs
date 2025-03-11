@@ -29,6 +29,9 @@ namespace XiaoZhi.Unity
             return content;
         }
 
+        [JsonProperty("CUSTOM_MAC_ADDRESS")]
+        public string CustomMacAddress { get; set; }
+
         [JsonProperty("WEBSOCKET_URL")] public string WebSocketUrl { get; set; }
 
         [JsonProperty("WEBSOCKET_ACCESS_TOKEN")]

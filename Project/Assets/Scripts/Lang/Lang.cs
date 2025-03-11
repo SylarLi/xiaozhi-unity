@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -22,8 +21,8 @@ namespace XiaoZhi.Unity.Lang
 
         private static void LoadStrings()
         {
-            var jsonPath = Path.Combine(UnityEngine.Application.streamingAssetsPath, $"lang", $"{Code.Value}.json");
-            if (!File.Exists(jsonPath))
+            var jsonPath = $"lang/{Code.Value}.json";
+            if (!ResourceLoader.FileExists(ResourceLoader.ResourceType.StreamingAssets, jsonPath))
             {
                 Debug.LogError($"Language file not found: {jsonPath}");
                 return;
@@ -31,7 +30,7 @@ namespace XiaoZhi.Unity.Lang
 
             try
             {
-                var jsonText = File.ReadAllText(jsonPath);
+                var jsonText = ResourceLoader.ReadAllText(ResourceLoader.ResourceType.StreamingAssets, jsonPath);
                 _strings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonText);
             }
             catch (Exception ex)

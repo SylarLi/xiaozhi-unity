@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using XiaoZhi.Unity;
 
@@ -11,7 +10,7 @@ public class Entry : MonoBehaviour
     
     private void OnGUI()
     {
-        if (GUILayout.Button("Boot", GUILayout.Width(100), GUILayout.Height(50)))
+        if (GUILayout.Button("Boot", GUILayout.Width(300), GUILayout.Height(300)))
         {
             _ = App.Instance.ToggleChatState();
         }

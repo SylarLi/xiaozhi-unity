@@ -186,10 +186,7 @@ namespace XiaoZhi.Unity
                     {
                         await SetDeviceState(DeviceState.Connecting);
                         if (!await _protocol.OpenAudioChannel())
-                        {
                             return;
-                        }
-
                         _keepListening = true;
                         await _protocol.SendStartListening(ListenMode.AutoStop);
                         await SetDeviceState(DeviceState.Listening);
@@ -289,11 +286,8 @@ namespace XiaoZhi.Unity
                 }
             }
 
-            if (Config.Instance.UseWakeWordDetect)
-            {
-                if (_deviceState != DeviceState.Listening && _wakeWordDetect.IsDetectionRunning)
-                    _wakeWordDetect.Feed(data);
-            }
+            if (Config.Instance.UseWakeWordDetect && _deviceState != DeviceState.Listening &&
+                _wakeWordDetect.IsDetectionRunning) _wakeWordDetect.Feed(data);
 
             if (Config.Instance.UseAudioProcessing)
             {
@@ -303,12 +297,8 @@ namespace XiaoZhi.Unity
             {
                 if (_deviceState == DeviceState.Listening)
                 {
-                    Schedule(() =>
-                    {
-                        _opusEncoder.Encode(data.Span,
-                            opus => { Schedule(async () => { await _protocol.SendAudio(opus); }); });
-                        return Task.CompletedTask;
-                    }, AppTaskType.Background);
+                    _opusEncoder.Encode(data.Span,
+                        opus => { Schedule(async () => { await _protocol.SendAudio(opus); }); });
                 }
             }
         }
@@ -318,21 +308,17 @@ namespace XiaoZhi.Unity
             if (_deviceState == DeviceState.Listening)
                 return;
             _lastOutputTime = DateTime.Now;
-            Schedule(() =>
+            if (_aborted) return;
+            if (!_opusDecoder.Decode(opus.Span, out var pcm)) return;
+            var codec = Context.Instance.AudioCodec;
+            if (_opusDecodeSampleRate != codec.OutputSampleRate)
             {
-                if (_aborted) return Task.CompletedTask;
-                if (!_opusDecoder.Decode(opus.Span, out var pcm)) return Task.CompletedTask;
-                var codec = Context.Instance.AudioCodec;
-                if (_opusDecodeSampleRate != codec.OutputSampleRate)
-                {
-                    var resampled = new short[_outputResampler.GetOutputSamples(pcm.Length)];
-                    _inputResampler.Process(pcm.Span, resampled.AsSpan());
-                    pcm = resampled;
-                }
+                var resampled = new short[_outputResampler.GetOutputSamples(pcm.Length)];
+                _inputResampler.Process(pcm.Span, resampled.AsSpan());
+                pcm = resampled;
+            }
 
-                codec.OutputData(pcm.Span);
-                return Task.CompletedTask;
-            }, AppTaskType.Background);
+            codec.OutputData(pcm.Span);
         }
 
         private void ResetDecoder()
