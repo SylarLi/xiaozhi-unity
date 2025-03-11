@@ -52,28 +52,18 @@ namespace XiaoZhi.Unity
 
         [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void opus_encoder_destroy(IntPtr st);
-
-
+        
         public const int SILK_RESAMPLER_MAX_IIR_ORDER = 6;
         public const int SILK_RESAMPLER_MAX_FIR_ORDER = 36;
-
-        [StructLayout(LayoutKind.Explicit)]
-        public struct FIRUnion
-        {
-            [FieldOffset(0)] [MarshalAs(UnmanagedType.ByValArray, SizeConst = SILK_RESAMPLER_MAX_FIR_ORDER)]
-            public int[] i32;
-
-            [FieldOffset(0)] [MarshalAs(UnmanagedType.ByValArray, SizeConst = SILK_RESAMPLER_MAX_FIR_ORDER)]
-            public short[] i16;
-        }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct silk_resampler_state_struct
         {
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = SILK_RESAMPLER_MAX_IIR_ORDER)]
             public int[] sIIR;
-
-            public FIRUnion sFIR;
+            
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = SILK_RESAMPLER_MAX_FIR_ORDER)]
+            public int[] sFIR;
 
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 48)]
             public short[] delayBuf;
@@ -86,16 +76,14 @@ namespace XiaoZhi.Unity
             public int Fs_in_kHz;
             public int Fs_out_kHz;
             public int inputDelay;
-            public IntPtr Coefs;
+            public unsafe short* Coefs;
         }
 
 
         [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int silk_resampler_init(ref silk_resampler_state_struct S, int Fs_Hz_in, int Fs_Hz_out,
-            int forEnc);
+        public static extern int silk_resampler_init(IntPtr S, int Fs_Hz_in, int Fs_Hz_out, int forEnc);
 
         [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe int silk_resampler(ref silk_resampler_state_struct S, short* output, short* input,
-            int inLen);
+        public static extern unsafe int silk_resampler(IntPtr S, short* output, short* input, int inLen);
     }
 }

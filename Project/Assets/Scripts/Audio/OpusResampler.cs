@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace XiaoZhi.Unity
 {
-    public class OpusResampler
+    public class OpusResampler : IDisposable
     {
         protected int inputSampleRate;
         public int InputSampleRate => inputSampleRate;
@@ -13,17 +13,19 @@ namespace XiaoZhi.Unity
         protected int outputSampleRate;
         public int OutputSampleRate => outputSampleRate;
 
-        protected OpusWrapper.silk_resampler_state_struct resamplerState;
+        protected IntPtr resamplerState;
 
         public void Configure(int inputSampleRate, int outputSampleRate)
         {
             var encode = inputSampleRate > outputSampleRate ? 1 : 0;
-            // var ret = OpusWrapper.silk_resampler_init(ref resamplerState, inputSampleRate, outputSampleRate, encode);
-            // if (ret != 0)
-            // {
-            //     Debug.LogError($"Failed to initialize resampler: {ret}");
-            //     return;
-            // }
+            if (resamplerState != IntPtr.Zero) Marshal.FreeHGlobal(resamplerState);
+            resamplerState = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(OpusWrapper.silk_resampler_state_struct)));
+            var ret = OpusWrapper.silk_resampler_init(resamplerState, inputSampleRate, outputSampleRate, encode);
+            if (ret != 0)
+            {
+                Debug.LogError($"Failed to initialize resampler: {ret}");
+                return;
+            }
 
             this.inputSampleRate = inputSampleRate;
             this.outputSampleRate = outputSampleRate;
@@ -33,21 +35,35 @@ namespace XiaoZhi.Unity
 
         public void Process(ReadOnlySpan<short> input, Span<short> output)
         {
-            // int ret;
-            // unsafe
-            // {
-            //     fixed (short* pin = input)
-            //     fixed (short* pout = output)
-            //         ret = OpusWrapper.silk_resampler(ref resamplerState, pout, pin, input.Length);
-            // }
+            int ret;
+            unsafe
+            {
+                fixed (short* pin = input)
+                fixed (short* pout = output)
+                    ret = OpusWrapper.silk_resampler(resamplerState, pout, pin, input.Length);
+            }
 
-            // if (ret != 0)
-            //     Debug.Log($"Failed to process resampler: {ret}");
+            if (ret != 0)
+                Debug.Log($"Failed to process resampler: {ret}");
         }
 
         public int GetOutputSamples(int inputSamples)
         {
             return inputSamples * outputSampleRate / inputSampleRate;
+        }
+
+        public void Dispose()
+        {
+            if (resamplerState != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(resamplerState);
+                resamplerState = IntPtr.Zero;
+            }
+        }
+
+        ~OpusResampler()
+        {
+            Dispose();
         }
     }
 }

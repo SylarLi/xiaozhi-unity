@@ -22,7 +22,7 @@ namespace XiaoZhi.Unity
             Uuid = Guid.NewGuid().ToString("d");
             Display = new UIDisplay();
             AudioCodec = new UnityAudioCodec(Config.Instance.AudioInputSampleRate,
-                Config.Instance.AudioOutputSampleRate, false);
+                Config.Instance.AudioOutputSampleRate);
         }
 
         public string GetMacAddress()

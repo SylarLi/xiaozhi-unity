@@ -16,13 +16,6 @@ namespace XiaoZhi.Unity
             _frameData = new short[sampleRate / 1000 * channels * durationMs];
         }
 
-        public void Dispose()
-        {
-            if (_decoder == IntPtr.Zero) return;
-            OpusWrapper.opus_decoder_destroy(_decoder);
-            _decoder = IntPtr.Zero;
-        }
-
         public void ResetState()
         {
             if (_decoder == IntPtr.Zero) return;
@@ -49,6 +42,18 @@ namespace XiaoZhi.Unity
             if (decodeBytes < 0) throw new Exception("OpusWrapper.opus_decode error: " + decodeBytes);
             pcm = _frameData;
             return true;
+        }
+
+        public void Dispose()
+        {
+            if (_decoder == IntPtr.Zero) return;
+            OpusWrapper.opus_decoder_destroy(_decoder);
+            _decoder = IntPtr.Zero;
+        }
+
+        ~OpusDecoder()
+        {
+            Dispose();
         }
     }
 }

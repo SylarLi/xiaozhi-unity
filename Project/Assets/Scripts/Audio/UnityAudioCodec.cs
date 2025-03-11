@@ -21,13 +21,11 @@ namespace XiaoZhi.Unity
         private bool _isPlaying;
         private readonly string _deviceName;
 
-        public UnityAudioCodec(int inputSampleRate, int outputSampleRate, bool inputReference)
+        public UnityAudioCodec(int inputSampleRate, int outputSampleRate)
         {
             this.inputSampleRate = inputSampleRate;
             this.outputSampleRate = outputSampleRate;
-            this.inputReference = inputReference;
-            inputChannels = inputReference ? 2 : 1;
-            duplex = true;
+            inputChannels = 1;
             _audioSource = new GameObject(GetType().Name).AddComponent<AudioSource>();
             Object.DontDestroyOnLoad(_audioSource.gameObject);
             _recordingBufferSize = inputSampleRate * RecordingBufferSec * inputChannels;
@@ -42,7 +40,7 @@ namespace XiaoZhi.Unity
             _audioSource.loop = true;
             if (Microphone.devices.Length == 0)
                 throw new NotSupportedException("没有可用的录音设备");
-            _deviceName = Microphone.devices[^1];
+            _deviceName = Microphone.devices[0];
         }
 
         public override void Update()
@@ -90,9 +88,9 @@ namespace XiaoZhi.Unity
                 return 0;
             var samples = data.Length;
             var position = _playbackEndPosition;
-            _playbackEndPosition = (position + samples) % _playbackBufferSize;
             for (var i = 0; i < samples; i++)
                 _playbackBuffer[(position + i) % _playbackBufferSize] = data[i] / (float)short.MaxValue;
+            _playbackEndPosition = (position + samples) % _playbackBufferSize;
             _isPlaying = true;
             return samples;
         }

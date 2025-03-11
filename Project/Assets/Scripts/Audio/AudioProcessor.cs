@@ -17,7 +17,7 @@ namespace XiaoZhi.Unity
             isRunning = false;
         }
 
-        public abstract void Initialize(int channels, bool reference);
+        public abstract void Initialize(int channels);
 
         public abstract void Input(ReadOnlyMemory<short> data);
 

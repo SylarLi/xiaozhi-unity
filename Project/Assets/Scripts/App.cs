@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -48,7 +47,6 @@ namespace XiaoZhi.Unity
         private OpusDecoder _opusDecoder;
         private int _opusDecodeSampleRate = -1;
         private OpusResampler _inputResampler;
-        private OpusResampler _referenceResampler;
         private OpusResampler _outputResampler;
 
         private OTA _ota;
@@ -65,6 +63,7 @@ namespace XiaoZhi.Unity
 
         public async void Start()
         {
+            InitializePlatform();
             var display = Context.Instance.Display;
             await SetDeviceState(DeviceState.Starting);
             InitializeAudio();
@@ -95,6 +94,10 @@ namespace XiaoZhi.Unity
 
         public void Dispose()
         {
+            _opusDecoder?.Dispose();
+            _opusEncoder?.Dispose();
+            _inputResampler?.Dispose();
+            _outputResampler?.Dispose();
         }
 
         private async Task SetDeviceState(DeviceState state)
@@ -255,35 +258,9 @@ namespace XiaoZhi.Unity
                 return;
             if (codec.InputSampleRate != _inputResampler.OutputSampleRate)
             {
-                if (codec.InputChannels == 2)
-                {
-                    var micChannel = new short[data.Length / 2];
-                    var referenceChannel = new short[data.Length / 2];
-                    for (int i = 0, j = 0; i < micChannel.Length; ++i, j += 2)
-                    {
-                        micChannel[i] = data.Span[j];
-                        referenceChannel[i] = data.Span[j + 1];
-                    }
-
-                    var resampledMic = new short[_inputResampler.GetOutputSamples(micChannel.Length)];
-                    var resampledReference = new short[_referenceResampler.GetOutputSamples(referenceChannel.Length)];
-                    _inputResampler.Process(micChannel, resampledMic);
-                    _referenceResampler.Process(referenceChannel, resampledReference);
-                    var resampledData = new short[resampledMic.Length + resampledReference.Length];
-                    for (int i = 0, j = 0; i < resampledMic.Length; ++i, j += 2)
-                    {
-                        resampledData[j] = resampledMic[i];
-                        resampledData[j + 1] = resampledReference[i];
-                    }
-
-                    data = resampledData;
-                }
-                else
-                {
-                    var resampled = new short[_inputResampler.GetOutputSamples(data.Length)];
-                    _inputResampler.Process(data.Span, resampled);
-                    data = resampled;
-                }
+                var resampled = new short[_inputResampler.GetOutputSamples(data.Length)];
+                _inputResampler.Process(data.Span, resampled);
+                data = resampled;
             }
 
             if (Config.Instance.UseWakeWordDetect && _deviceState != DeviceState.Listening &&
@@ -314,7 +291,7 @@ namespace XiaoZhi.Unity
             if (_opusDecodeSampleRate != codec.OutputSampleRate)
             {
                 var resampled = new short[_outputResampler.GetOutputSamples(pcm.Length)];
-                _inputResampler.Process(pcm.Span, resampled.AsSpan());
+                _outputResampler.Process(pcm.Span, resampled.AsSpan());
                 pcm = resampled;
             }
 
@@ -352,14 +329,14 @@ namespace XiaoZhi.Unity
         private void ConfigureAudioProcessing()
         {
             var codec = Context.Instance.AudioCodec;
-            _audioProcessor.Initialize(codec.InputChannels, codec.InputReference);
+            _audioProcessor.Initialize(codec.InputChannels);
             _audioProcessor.OnOutputData += data =>
             {
                 _opusEncoder.Encode(data.Span,
                     opus => { Schedule(async () => { await _protocol.SendAudio(opus); }); });
             };
 
-            _wakeWordDetect.Initialize(codec.InputChannels, codec.InputReference);
+            _wakeWordDetect.Initialize(codec.InputChannels);
             _wakeWordDetect.OnVadStateChanged += speaking =>
             {
                 if (_deviceState != DeviceState.Listening) return;
@@ -411,9 +388,7 @@ namespace XiaoZhi.Unity
             var resampleRate = Config.Instance.AudioInputResampleRate;
             _opusEncoder = new OpusEncoder(resampleRate, 1, Config.Instance.OpusFrameDurationMs);
             _inputResampler = new OpusResampler();
-            _referenceResampler = new OpusResampler();
             _inputResampler.Configure(codec.InputSampleRate, resampleRate);
-            _referenceResampler.Configure(codec.InputSampleRate, resampleRate);
             codec.Start();
         }
 
@@ -561,6 +536,11 @@ namespace XiaoZhi.Unity
         private void SetTask(AppTaskType taskType, Task task)
         {
             _taskMap[taskType] = task;
+        }
+
+        private void InitializePlatform()
+        {
+
         }
     }
 }

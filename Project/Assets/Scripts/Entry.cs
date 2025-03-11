@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using XiaoZhi.Unity;
 
@@ -14,6 +15,7 @@ public class Entry : MonoBehaviour
         {
             _ = App.Instance.ToggleChatState();
         }
+        GUILayout.Label(Enum.GetName(typeof(DeviceState), App.Instance.GetDeviceState()), new GUIStyle() { fontSize = 50 });
     }
 
     private void Update()

@@ -23,13 +23,6 @@ namespace XiaoZhi.Unity
             _inBuffer = new Memory<short>();
         }
 
-        public void Dispose()
-        {
-            if (_encoder == IntPtr.Zero) return;
-            OpusWrapper.opus_encoder_destroy(_encoder);
-            _encoder = IntPtr.Zero;
-        }
-
         public bool Encode(ReadOnlySpan<short> pcm, Action<ReadOnlyMemory<byte>> handler)
         {
             if (_encoder == IntPtr.Zero)
@@ -79,6 +72,18 @@ namespace XiaoZhi.Unity
         {
             if (_encoder == IntPtr.Zero) return;
             OpusWrapper.opus_encoder_ctl(_encoder, OpusWrapper.OPUS_SET_COMPLEXITY_REQUEST, complexity);
+        }
+        
+        public void Dispose()
+        {
+            if (_encoder == IntPtr.Zero) return;
+            OpusWrapper.opus_encoder_destroy(_encoder);
+            _encoder = IntPtr.Zero;
+        }
+
+        ~OpusEncoder()
+        {
+            Dispose();
         }
     }
 }

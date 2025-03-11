@@ -5,15 +5,9 @@ namespace XiaoZhi.Unity
 {
     public abstract class AudioCodec
     {
-        protected bool duplex = false;
-        public bool Duplex => duplex;
+        protected bool inputEnabled;
 
-        protected bool inputReference = false;
-        public bool InputReference => inputReference;
-
-        protected bool inputEnabled = false;
-
-        protected bool outputEnabled = false;
+        protected bool outputEnabled;
 
         protected int inputSampleRate = 0;
         public int InputSampleRate => inputSampleRate;
@@ -32,10 +26,6 @@ namespace XiaoZhi.Unity
         public int OutputVolume => outputVolume;
 
         private Settings _settings;
-
-        public AudioCodec()
-        {
-        }
 
         public virtual void Update()
         {

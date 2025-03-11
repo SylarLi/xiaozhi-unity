@@ -9,21 +9,14 @@ namespace XiaoZhi.Unity
         protected int channels;
         protected bool reference;
         protected bool isDetectionRunning;
-        protected string lastDetectedWakeWord;
-        protected List<string> wakeWords;
+        protected readonly string lastDetectedWakeWord = string.Empty;
+        protected List<string> wakeWords = new();
         protected CancellationTokenSource detectionCancellation;
 
         public event Action<string> OnWakeWordDetected;
         public event Action<bool> OnVadStateChanged;
 
-        protected WakeWordDetect()
-        {
-            wakeWords = new List<string>();
-            isDetectionRunning = false;
-            lastDetectedWakeWord = string.Empty;
-        }
-
-        public abstract void Initialize(int channels, bool reference);
+        public abstract void Initialize(int channels);
 
         public abstract void Feed(ReadOnlyMemory<short> data);
 

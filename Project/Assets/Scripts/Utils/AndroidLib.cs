@@ -1,7 +1,10 @@
+#if UNITY_ANDROID && !UNITY_EDITOR
+
 namespace XiaoZhi.Unity
 {
-    public class AndroidLib
+    public static class AndroidLib
     {
-        
+
     }
 }
+#endif
