@@ -5,14 +5,10 @@ namespace XiaoZhi.Unity
 {
     public static class OpusWrapper
     {
-#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-        private const string LIBRARY_NAME = "libopus";
-#elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-        private const string LIBRARY_NAME = "libopus";
-#elif UNITY_ANDROID
-        private const string LIBRARY_NAME = "libopus";
-#elif UNITY_IOS
-        private const string LIBRARY_NAME = "__Internal";
+#if UNITY_IOS
+        private const string LibraryName = "__Internal";
+#else
+        private const string LibraryName = "libopus";
 #endif
 
         public const int OPUS_APPLICATION_VOIP = 2048;
@@ -20,37 +16,37 @@ namespace XiaoZhi.Unity
         public const int OPUS_SET_DTX_REQUEST = 4016;
         public const int OPUS_SET_COMPLEXITY_REQUEST = 4010;
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr opus_decoder_create(int Fs, int channels, out int error);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe int opus_decode_float(IntPtr st, char* data, int len, float* pcm, int frame_size,
             int decode_fec);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe int opus_decode(IntPtr st, char* data, int len, short* pcm, int frame_size,
             int decode_fec);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void opus_decoder_destroy(IntPtr st);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void opus_decoder_ctl(IntPtr st, int request);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr opus_encoder_create(int Fs, int channels, int application, out int error);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe int opus_encode(IntPtr st, short* pcm, int analysisFrameSize, char* data,
             int outDataBytes);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void opus_encoder_ctl(IntPtr st, int request);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void opus_encoder_ctl(IntPtr st, int request, int value);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void opus_encoder_destroy(IntPtr st);
         
         public const int SILK_RESAMPLER_MAX_IIR_ORDER = 6;
@@ -80,10 +76,10 @@ namespace XiaoZhi.Unity
         }
 
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int silk_resampler_init(IntPtr S, int Fs_Hz_in, int Fs_Hz_out, int forEnc);
 
-        [DllImport(LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe int silk_resampler(IntPtr S, short* output, short* input, int inLen);
     }
 }
