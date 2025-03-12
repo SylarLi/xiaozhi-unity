@@ -4,6 +4,7 @@ using System.Text;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -22,10 +23,15 @@ namespace XiaoZhi.Unity
 
         public override void Start()
         {
-            _buffer = new byte[8192];
+            _buffer = new byte[4096];
         }
 
-        public override async Task<bool> OpenAudioChannel()
+        public override void Dispose()
+        {
+            _ = CloseWebSocket();
+        }
+
+        public override async UniTask<bool> OpenAudioChannel()
         {
             var url = Config.Instance.WebSocketUrl;
             var token = Config.Instance.WebSocketAccessToken;
@@ -57,7 +63,7 @@ namespace XiaoZhi.Unity
             await _webSocket.ConnectAsync(new Uri(url), _cancellationTokenSource.Token);
             _isConnected = true;
             Debug.Log("WebSocket连接已打开");
-            _ = StartReceiving();
+            StartReceiving().Forget();
             var helloMessage = new
             {
                 type = "hello",
@@ -77,7 +83,7 @@ namespace XiaoZhi.Unity
             throw new TimeoutException("连接失败: 连接超时");
         }
 
-        private async Task StartReceiving()
+        private async UniTaskVoid StartReceiving()
         {
             try
             {
@@ -93,19 +99,14 @@ namespace XiaoZhi.Unity
                             await HandleWebSocketClose();
                             break;
                         case WebSocketMessageType.Binary:
-                        {
-                            var messageData = _buffer.Slice(0, result.Count).ToArray();
-                            InvokeOnAudioData(messageData);
+                            InvokeOnAudioData(_buffer.Slice(0, result.Count).Span);
                             break;
-                        }
                         case WebSocketMessageType.Text:
-                        {
                             var messageText = Encoding.UTF8.GetString(_buffer.Span.Slice(0, result.Count));
                             Debug.Log($"Incoming json: {messageText}");
                             HandleJsonMessage(messageText);
                             _lastIncomingTime = DateTime.Now;
                             break;
-                        }
                     }
                 }
             }
@@ -113,12 +114,12 @@ namespace XiaoZhi.Unity
             {
                 if (_webSocket.State == WebSocketState.Open)
                 {
-                    InvokeOnNetworkError($"接收消息错误: {ex.Message}");
+                    SetError($"接收消息错误: {ex.Message}");
                 }
             }
         }
 
-        private async Task HandleWebSocketClose()
+        private async UniTask HandleWebSocketClose()
         {
             if (_webSocket.State == WebSocketState.Open)
             {
@@ -157,22 +158,19 @@ namespace XiaoZhi.Unity
         {
             if (message["transport"]?.ToString() != "websocket")
             {
-                InvokeOnNetworkError("不支持的传输类型");
+                _helloTaskCompletionSource.SetResult(false);
+                SetError("不支持的传输类型");
                 return;
             }
 
             var audioParams = message["audio_params"];
-            if (audioParams != null)
-            {
-                ServerSampleRate = audioParams["sample_rate"]?.Value<int>() ?? 16000;
-            }
-
+            if (audioParams != null) ServerSampleRate = audioParams["sample_rate"]?.Value<int>() ?? 16000;
             _isAudioChannelOpen = true;
             _helloTaskCompletionSource.SetResult(true);
             InvokeOnChannelOpened();
         }
 
-        protected override async Task SendJson(object data)
+        protected override async UniTask SendJson(object data)
         {
             if (!_isConnected) throw new InvalidOperationException("WebSocket is not connected");
             var jsonStr = JsonConvert.SerializeObject(data);
@@ -184,7 +182,7 @@ namespace XiaoZhi.Unity
                 _cancellationTokenSource.Token);
         }
 
-        public override async Task SendAudio(ReadOnlyMemory<byte> audioData)
+        public override async UniTask SendAudio(ReadOnlyMemory<byte> audioData)
         {
             if (!_isConnected || !_isAudioChannelOpen) throw new InvalidOperationException("Audio channel is not open");
             await _webSocket.SendAsync(
@@ -194,12 +192,12 @@ namespace XiaoZhi.Unity
                 _cancellationTokenSource.Token);
         }
 
-        public override async Task CloseAudioChannel()
+        public override async UniTask CloseAudioChannel()
         {
             await CloseWebSocket();
         }
 
-        private async Task CloseWebSocket()
+        private async UniTask CloseWebSocket()
         {
             if (_webSocket != null)
             {
@@ -241,10 +239,7 @@ namespace XiaoZhi.Unity
         private bool IsTimeout()
         {
             if (_lastIncomingTime == default)
-            {
                 return false;
-            }
-
             return (DateTime.Now - _lastIncomingTime).TotalSeconds > 120;
         }
 

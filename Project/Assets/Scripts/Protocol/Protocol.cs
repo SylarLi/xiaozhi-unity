@@ -1,5 +1,6 @@
 using System;
-using System.Threading.Tasks;
+using System.Buffers;
+using Cysharp.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 
 namespace XiaoZhi.Unity
@@ -58,9 +59,9 @@ namespace XiaoZhi.Unity
         Speaking
     }
 
-    public abstract class Protocol
+    public abstract class Protocol: IDisposable
     {
-        public delegate void OnAudioDataReceived(ReadOnlyMemory<byte> data);
+        public delegate void OnAudioDataReceived(ReadOnlySpan<byte> data);
 
         public delegate void OnJsonMessageReceived(JObject message);
 
@@ -80,12 +81,13 @@ namespace XiaoZhi.Unity
         public int SessionId { get; protected set; }
 
         public abstract void Start();
-        public abstract Task<bool> OpenAudioChannel();
-        public abstract Task CloseAudioChannel();
+        public abstract void Dispose();
+        public abstract UniTask<bool> OpenAudioChannel();
+        public abstract UniTask CloseAudioChannel();
         public abstract bool IsAudioChannelOpened();
-        public abstract Task SendAudio(ReadOnlyMemory<byte> data);
+        public abstract UniTask SendAudio(ReadOnlyMemory<byte> data);
 
-        public virtual async Task SendAbortSpeaking(AbortReason reason)
+        public virtual async UniTask SendAbortSpeaking(AbortReason reason)
         {
             if (reason == AbortReason.WakeWordDetected)
             {
@@ -106,7 +108,7 @@ namespace XiaoZhi.Unity
             }
         }
 
-        public virtual async Task SendWakeWordDetected(string wakeWord)
+        public virtual async UniTask SendWakeWordDetected(string wakeWord)
         {
             await SendJson(new
             {
@@ -117,7 +119,7 @@ namespace XiaoZhi.Unity
             });
         }
 
-        public virtual async Task SendStartListening(ListenMode mode)
+        public virtual async UniTask SendStartListening(ListenMode mode)
         {
             await SendJson(new
             {
@@ -128,7 +130,7 @@ namespace XiaoZhi.Unity
             });
         }
 
-        public virtual async Task SendStopListening()
+        public virtual async UniTask SendStopListening()
         {
             await SendJson(new
             {
@@ -138,7 +140,7 @@ namespace XiaoZhi.Unity
             });
         }
 
-        public virtual async Task SendIotDescriptors(string descriptors)
+        public virtual async UniTask SendIotDescriptors(string descriptors)
         {
             await SendJson(new
             {
@@ -148,7 +150,7 @@ namespace XiaoZhi.Unity
             });
         }
 
-        public virtual async Task SendIotStates(string states)
+        public virtual async UniTask SendIotStates(string states)
         {
             await SendJson(new
             {
@@ -158,9 +160,9 @@ namespace XiaoZhi.Unity
             });
         }
 
-        protected abstract Task SendJson(object data);
+        protected abstract UniTask SendJson(object data);
 
-        protected void InvokeOnAudioData(ReadOnlyMemory<byte> data)
+        protected void InvokeOnAudioData(ReadOnlySpan<byte> data)
         {
             OnIncomingAudio?.Invoke(data);
         }

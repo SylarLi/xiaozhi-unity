@@ -18,7 +18,7 @@ namespace XiaoZhi.Unity
 
         public abstract void Initialize(int channels);
 
-        public abstract void Feed(ReadOnlyMemory<short> data);
+        public abstract void Feed(ReadOnlySpan<short> data);
 
         public virtual void StartDetection()
         {

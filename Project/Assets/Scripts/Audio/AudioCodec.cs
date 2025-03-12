@@ -1,5 +1,7 @@
 using System;
 using System.Buffers;
+using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace XiaoZhi.Unity
 {
@@ -27,9 +29,7 @@ namespace XiaoZhi.Unity
 
         private Settings _settings;
 
-        public virtual void Update()
-        {
-        }
+        private Memory<short> _frameBuffer = new();
 
         public virtual void SetOutputVolume(int volume)
         {
@@ -61,19 +61,15 @@ namespace XiaoZhi.Unity
             Write(data);
         }
 
-        public bool InputData(out ReadOnlyMemory<short> data)
+        public bool InputData(out ReadOnlySpan<short> data)
         {
             const int duration = 30;
-            var inputFrameSize = inputSampleRate / 1000 * duration * inputChannels;
-            var temp = new short[inputFrameSize];
-            if (Read(temp.AsSpan()) > 0)
-            {
-                data = temp;
-                return true;
-            }
-
-            data = default;
-            return false;
+            var frameSize = inputSampleRate / 1000 * duration * inputChannels;
+            if (_frameBuffer.Length < frameSize) _frameBuffer = new short[Mathf.NextPowerOfTwo(frameSize)];
+            var span = _frameBuffer.Slice(0, frameSize).Span;
+            var ret = Read(span) > 0;
+            data = span;
+            return ret;
         }
 
         protected abstract int Read(Span<short> dest);
