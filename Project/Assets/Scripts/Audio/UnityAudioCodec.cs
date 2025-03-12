@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using Cysharp.Threading.Tasks;
 using Object = UnityEngine.Object;
 
 namespace XiaoZhi.Unity
@@ -43,20 +44,6 @@ namespace XiaoZhi.Unity
             _deviceName = Microphone.devices[0];
         }
 
-        public override void Update()
-        {
-            switch (_isPlaying)
-            {
-                case true when !_audioSource.isPlaying:
-                    _audioSource.volume = outputVolume / 100f;
-                    _audioSource.Play();
-                    break;
-                case false when _audioSource.isPlaying:
-                    _audioSource.Stop();
-                    break;
-            }
-        }
-
         private void OnAudioRead(float[] data)
         {
             var readLen = Mathf.Min(data.Length,
@@ -91,7 +78,19 @@ namespace XiaoZhi.Unity
             for (var i = 0; i < samples; i++)
                 _playbackBuffer[(position + i) % _playbackBufferSize] = data[i] / (float)short.MaxValue;
             _playbackEndPosition = (position + samples) % _playbackBufferSize;
-            _isPlaying = true;
+            if (!_isPlaying)
+            {
+                _isPlaying = true;
+                UniTask.Post(() =>
+                {
+                    if (!_audioSource.isPlaying)
+                    {
+                        _audioSource.volume = outputVolume / 100f;
+                        _audioSource.Play();
+                    }
+                });
+            }
+
             return samples;
         }
 
@@ -100,9 +99,14 @@ namespace XiaoZhi.Unity
             if (outputEnabled == enable) return;
             if (!enable)
             {
-                _isPlaying = false;
                 _playbackReadPosition = 0;
                 _playbackEndPosition = 0;
+                _isPlaying = false;
+                UniTask.Post(() =>
+                {
+                    if (_audioSource.isPlaying)
+                        _audioSource.Stop();
+                });
             }
 
             base.EnableOutput(enable);
@@ -115,7 +119,7 @@ namespace XiaoZhi.Unity
             var position = Microphone.GetPosition(_deviceName);
             if (position < 0) return 0;
             _recordingBuffer ??= new float[dest.Length];
-            if (_recordingBuffer.Length != dest.Length) Array.Resize(ref _recordingBuffer, dest.Length);
+            if (_recordingBuffer.Length < dest.Length) Array.Resize(ref _recordingBuffer, Mathf.NextPowerOfTwo(dest.Length));
             var firstRead = 0;
             if (position < _recordingPosition)
             {

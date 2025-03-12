@@ -22,7 +22,7 @@ namespace XiaoZhi.Unity
             OpusWrapper.opus_decoder_ctl(_decoder, OpusWrapper.OPUS_RESET_STATE);
         }
 
-        public bool Decode(ReadOnlySpan<byte> opus, out ReadOnlyMemory<short> pcm)
+        public bool Decode(ReadOnlySpan<byte> opus, out ReadOnlySpan<short> pcm)
         {
             pcm = default;
             if (_decoder == IntPtr.Zero)
@@ -40,7 +40,7 @@ namespace XiaoZhi.Unity
             }
 
             if (decodeBytes < 0) throw new Exception("OpusWrapper.opus_decode error: " + decodeBytes);
-            pcm = _frameData;
+            pcm = _frameData.Span;
             return true;
         }
 

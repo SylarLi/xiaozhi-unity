@@ -8,7 +8,9 @@ namespace XiaoZhi.Unity
         private const int MaxOpusPacketSize = 1500;
 
         private IntPtr _encoder;
-        private Memory<short> _inBuffer;
+        private RingBuffer<short> _inBuffer;
+        private Memory<short> _frameBuffer;
+        private Memory<byte> _outBuffer;
         private readonly int _frameSize;
 
         public OpusEncoder(int sampleRate, int channels, int durationMs)
@@ -20,7 +22,9 @@ namespace XiaoZhi.Unity
             SetDtx(true);
             SetComplexity(5);
             _frameSize = sampleRate / 1000 * channels * durationMs;
-            _inBuffer = new Memory<short>();
+            _frameBuffer = new short[_frameSize];
+            _inBuffer = new RingBuffer<short>(4096);
+            _outBuffer = new byte[MaxOpusPacketSize];
         }
 
         public bool Encode(ReadOnlySpan<short> pcm, Action<ReadOnlyMemory<byte>> handler)
@@ -31,26 +35,26 @@ namespace XiaoZhi.Unity
                 return false;
             }
 
-            // Append new PCM data to buffer
-            Memory<short> newBuffer = new short[_inBuffer.Length + pcm.Length];
-            _inBuffer.CopyTo(newBuffer);
-            pcm.CopyTo(newBuffer[_inBuffer.Length..].Span);
-            _inBuffer = newBuffer;
-            while (_inBuffer.Length >= _frameSize)
+            if (!_inBuffer.TryWrite(pcm))
             {
-                var opus = new byte[MaxOpusPacketSize];
+                Debug.LogError("Audio encoder buffer is full!");
+                return false;
+            }
+            
+            while (_inBuffer.TryRead(_frameBuffer.Span))
+            {
                 int encodedBytes;
                 unsafe
                 {
-                    fixed (short* inPtr = _inBuffer.Span)
-                    fixed (byte* outPtr = opus)
-                        encodedBytes = OpusWrapper.opus_encode(_encoder, inPtr, _frameSize, (char*)outPtr, opus.Length);
+                    fixed (short* inPtr = _frameBuffer.Span)
+                    fixed (byte* outPtr = _outBuffer.Span)
+                        encodedBytes = OpusWrapper.opus_encode(_encoder, inPtr, _frameSize, (char*)outPtr,
+                            _outBuffer.Length);
                 }
 
                 if (encodedBytes < 0)
                     throw new Exception("OpusWrapper.opus_encode error: " + encodedBytes);
-                handler?.Invoke(new ReadOnlyMemory<byte>(opus, 0, encodedBytes));
-                _inBuffer = _inBuffer[_frameSize..];
+                handler.Invoke(_outBuffer.Slice(0, encodedBytes));
             }
 
             return true;
@@ -73,7 +77,7 @@ namespace XiaoZhi.Unity
             if (_encoder == IntPtr.Zero) return;
             OpusWrapper.opus_encoder_ctl(_encoder, OpusWrapper.OPUS_SET_COMPLEXITY_REQUEST, complexity);
         }
-        
+
         public void Dispose()
         {
             if (_encoder == IntPtr.Zero) return;

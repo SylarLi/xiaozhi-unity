@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Threading;
 
 namespace XiaoZhi.Unity
@@ -10,7 +11,7 @@ namespace XiaoZhi.Unity
         protected bool isRunning;
         public bool IsRunning => isRunning;
 
-        public event Action<Memory<short>> OnOutputData;
+        public event Action<ReadOnlyMemory<short>> OnOutputData;
 
         protected AudioProcessor()
         {
@@ -19,7 +20,7 @@ namespace XiaoZhi.Unity
 
         public abstract void Initialize(int channels);
 
-        public abstract void Input(ReadOnlyMemory<short> data);
+        public abstract void Input(ReadOnlySpan<short> data);
 
         public virtual void Start()
         {
@@ -33,7 +34,7 @@ namespace XiaoZhi.Unity
             isRunning = false;
         }
 
-        protected virtual void RaiseOutputData(Memory<short> data)
+        protected virtual void RaiseOutputData(ReadOnlyMemory<short> data)
         {
             OnOutputData?.Invoke(data);
         }

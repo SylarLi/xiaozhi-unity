@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace XiaoZhi.Unity
@@ -19,93 +18,85 @@ namespace XiaoZhi.Unity
         FatalError
     }
 
-    public enum AppTaskType
-    {
-        Default,
-        Background
-    }
-
     public class App : IDisposable
     {
         public static App Instance { get; } = new();
 
-        // 音频处理相关字段
-        private WakeWordDetect _wakeWordDetect;
-        private AudioProcessor _audioProcessor;
-
-        // 系统状态相关字段
-        private readonly Dictionary<AppTaskType, Task> _taskMap;
         private Protocol _protocol;
         private DeviceState _deviceState = DeviceState.Unknown;
+        public DeviceState GetDeviceState() => _deviceState;
         private bool _keepListening;
         private bool _aborted;
         private bool _voiceDetected;
-
-        // 音频编解码相关字段
+        public bool IsVoiceDetected() => _voiceDetected;
         private DateTime _lastOutputTime;
+        private int _opusDecodeSampleRate = -1;
+        private WakeWordDetect _wakeWordDetect;
+        private AudioProcessor _audioProcessor;
         private OpusEncoder _opusEncoder;
         private OpusDecoder _opusDecoder;
-        private int _opusDecodeSampleRate = -1;
         private OpusResampler _inputResampler;
         private OpusResampler _outputResampler;
-
         private OTA _ota;
-
-        public DeviceState GetDeviceState() => _deviceState;
-        public bool IsVoiceDetected() => _voiceDetected;
-
-        private App()
-        {
-            _taskMap = new Dictionary<AppTaskType, Task>();
-            foreach (AppTaskType task in Enum.GetValues(typeof(AppTaskType)))
-                _taskMap[task] = Task.CompletedTask;
-        }
 
         public async void Start()
         {
+            InitializeTask();
             InitializePlatform();
             var display = Context.Instance.Display;
-            await SetDeviceState(DeviceState.Starting);
+            SetDeviceState(DeviceState.Starting);
             InitializeAudio();
             display.SetStatus("正在加载协议");
             InitializeProtocol();
             await CheckNewVersion();
             if (Config.Instance.UseAudioProcessing) ConfigureAudioProcessing();
-            await SetDeviceState(DeviceState.Idle);
+            SetDeviceState(DeviceState.Idle);
+            MainLoop().Forget();
         }
 
-        public void Update()
+        private async UniTaskVoid MainLoop()
         {
             var codec = Context.Instance.AudioCodec;
-            switch (_deviceState)
+            while (true)
             {
-                case DeviceState.Listening:
-                    InputAudio();
-                    break;
-                case DeviceState.Idle:
-                    var duration = (DateTime.Now - _lastOutputTime).TotalSeconds;
-                    const int maxSilenceSeconds = 10;
-                    if (duration > maxSilenceSeconds) codec.EnableOutput(false);
-                    break;
+                await UniTask.Delay(30);
+                switch (_deviceState)
+                {
+                    case DeviceState.Listening:
+                        InputAudio();
+                        break;
+                    case DeviceState.Idle:
+                        var duration = (DateTime.Now - _lastOutputTime).TotalSeconds;
+                        const int maxSilenceSeconds = 10;
+                        if (duration > maxSilenceSeconds) codec.EnableOutput(false);
+                        break;
+                }
             }
-
-            codec.Update();
         }
 
         public void Dispose()
         {
+            _protocol?.Dispose();
             _opusDecoder?.Dispose();
             _opusEncoder?.Dispose();
             _inputResampler?.Dispose();
             _outputResampler?.Dispose();
+            _audioProcessor?.Dispose();
         }
 
-        private async Task SetDeviceState(DeviceState state)
+        private void InitializePlatform()
+        {
+        }
+
+        private void InitializeTask()
+        {
+        }
+
+        private void SetDeviceState(DeviceState state)
         {
             if (_deviceState == state) return;
             _deviceState = state;
             Debug.Log("设备状态改变: " + _deviceState);
-            await GetTask(AppTaskType.Background);
             var context = Context.Instance;
             var display = context.Display;
             var codec = context.AudioCodec;
@@ -147,11 +138,6 @@ namespace XiaoZhi.Unity
             }
         }
 
-        private void Schedule(Func<Task> callback, AppTaskType taskType = AppTaskType.Default)
-        {
-            SetTask(taskType, Task.WhenAll(GetTask(taskType), Task.Run(callback)));
-        }
-
         private void Alert(string status, string message, string emotion = null)
         {
             var display = Context.Instance.Display;
@@ -161,18 +147,18 @@ namespace XiaoZhi.Unity
             Debug.Log("Alert: " + status + " " + message + " " + emotion);
         }
 
-        private async Task AbortSpeaking(AbortReason reason)
+        private async UniTask AbortSpeaking(AbortReason reason)
         {
             Debug.Log("Abort speaking");
             _aborted = true;
             await _protocol.SendAbortSpeaking(reason);
         }
 
-        public async Task ToggleChatState()
+        public async UniTask ToggleChatState()
         {
             if (_deviceState == DeviceState.Activating)
             {
-                await SetDeviceState(DeviceState.Idle);
+                SetDeviceState(DeviceState.Idle);
                 return;
             }
 
@@ -185,30 +171,27 @@ namespace XiaoZhi.Unity
             switch (_deviceState)
             {
                 case DeviceState.Idle:
-                    Schedule(async () =>
-                    {
-                        await SetDeviceState(DeviceState.Connecting);
-                        if (!await _protocol.OpenAudioChannel())
-                            return;
-                        _keepListening = true;
-                        await _protocol.SendStartListening(ListenMode.AutoStop);
-                        await SetDeviceState(DeviceState.Listening);
-                    });
+                    SetDeviceState(DeviceState.Connecting);
+                    if (!await _protocol.OpenAudioChannel())
+                        return;
+                    _keepListening = true;
+                    await _protocol.SendStartListening(ListenMode.AutoStop);
+                    SetDeviceState(DeviceState.Listening);
                     break;
                 case DeviceState.Speaking:
-                    Schedule(async () => { await AbortSpeaking(AbortReason.None); });
+                    await AbortSpeaking(AbortReason.None);
                     break;
                 case DeviceState.Listening:
-                    Schedule(async () => { await _protocol.CloseAudioChannel(); });
+                    await _protocol.CloseAudioChannel();
                     break;
             }
         }
 
-        public async Task StartListening()
+        public async UniTask StartListening()
         {
             if (_deviceState == DeviceState.Activating)
             {
-                await SetDeviceState(DeviceState.Idle);
+                SetDeviceState(DeviceState.Idle);
                 return;
             }
 
@@ -223,28 +206,28 @@ namespace XiaoZhi.Unity
             {
                 if (!_protocol.IsAudioChannelOpened())
                 {
-                    await SetDeviceState(DeviceState.Connecting);
+                    SetDeviceState(DeviceState.Connecting);
                     if (!await _protocol.OpenAudioChannel())
                         return;
                 }
 
                 await _protocol.SendStartListening(ListenMode.ManualStop);
-                await SetDeviceState(DeviceState.Listening);
+                SetDeviceState(DeviceState.Listening);
             }
             else if (_deviceState == DeviceState.Speaking)
             {
                 await AbortSpeaking(AbortReason.None);
                 await _protocol.SendStartListening(ListenMode.ManualStop);
-                await SetDeviceState(DeviceState.Listening);
+                SetDeviceState(DeviceState.Listening);
             }
         }
 
-        public async Task StopListening()
+        public async UniTask StopListening()
         {
             if (_deviceState == DeviceState.Listening)
             {
                 await _protocol.SendStopListening();
-                await SetDeviceState(DeviceState.Idle);
+                SetDeviceState(DeviceState.Idle);
             }
         }
 
@@ -257,15 +240,9 @@ namespace XiaoZhi.Unity
             if (!codec.InputData(out var data))
                 return;
             if (codec.InputSampleRate != _inputResampler.OutputSampleRate)
-            {
-                var resampled = new short[_inputResampler.GetOutputSamples(data.Length)];
-                _inputResampler.Process(data.Span, resampled);
-                data = resampled;
-            }
-
+                _inputResampler.Process(data, out data);
             if (Config.Instance.UseWakeWordDetect && _deviceState != DeviceState.Listening &&
                 _wakeWordDetect.IsDetectionRunning) _wakeWordDetect.Feed(data);
-
             if (Config.Instance.UseAudioProcessing)
             {
                 if (_audioProcessor.IsRunning) _audioProcessor.Input(data);
@@ -273,29 +250,20 @@ namespace XiaoZhi.Unity
             else
             {
                 if (_deviceState == DeviceState.Listening)
-                {
-                    _opusEncoder.Encode(data.Span,
-                        opus => { Schedule(async () => { await _protocol.SendAudio(opus); }); });
-                }
+                    _opusEncoder.Encode(data, opus => { _protocol.SendAudio(opus).Forget(); });
             }
         }
 
-        private void OutputAudio(ReadOnlyMemory<byte> opus)
+        private void OutputAudio(ReadOnlySpan<byte> opus)
         {
             if (_deviceState == DeviceState.Listening)
                 return;
             _lastOutputTime = DateTime.Now;
             if (_aborted) return;
-            if (!_opusDecoder.Decode(opus.Span, out var pcm)) return;
+            if (!_opusDecoder.Decode(opus, out var pcm)) return;
             var codec = Context.Instance.AudioCodec;
-            if (_opusDecodeSampleRate != codec.OutputSampleRate)
-            {
-                var resampled = new short[_outputResampler.GetOutputSamples(pcm.Length)];
-                _outputResampler.Process(pcm.Span, resampled.AsSpan());
-                pcm = resampled;
-            }
-
-            codec.OutputData(pcm.Span);
+            if (_opusDecodeSampleRate != codec.OutputSampleRate) _outputResampler.Process(pcm, out pcm);
+            codec.OutputData(pcm);
         }
 
         private void ResetDecoder()
@@ -317,14 +285,11 @@ namespace XiaoZhi.Unity
             _outputResampler.Configure(_opusDecodeSampleRate, codec.OutputSampleRate);
         }
 
-        private async Task ShowActivationCode()
+        private async UniTask ShowActivationCode()
         {
             Alert(Lang.Strings.ACTIVATION, _ota.ActivationMessage, "happy");
-            await Task.Delay(1000);
+            await UniTask.Delay(1000);
         }
-
-        // private void OnClockTimer();
-        // private void PlayLocalFile(byte[] data);
 
         private void ConfigureAudioProcessing()
         {
@@ -332,8 +297,7 @@ namespace XiaoZhi.Unity
             _audioProcessor.Initialize(codec.InputChannels);
             _audioProcessor.OnOutputData += data =>
             {
-                _opusEncoder.Encode(data.Span,
-                    opus => { Schedule(async () => { await _protocol.SendAudio(opus); }); });
+                _opusEncoder.Encode(data.Span, opus => { _protocol.SendAudio(opus).Forget(); });
             };
 
             _wakeWordDetect.Initialize(codec.InputChannels);
@@ -344,16 +308,16 @@ namespace XiaoZhi.Unity
             };
             _wakeWordDetect.OnWakeWordDetected += wakeWord =>
             {
-                Schedule(async () =>
+                UniTask.Void(async () =>
                 {
                     if (_deviceState == DeviceState.Idle)
                     {
-                        await SetDeviceState(DeviceState.Connecting);
+                        SetDeviceState(DeviceState.Connecting);
                         _wakeWordDetect.EncodeWakeWordData();
                         if (!await _protocol.OpenAudioChannel())
                         {
                             Debug.Log("Failed to open audio channel");
-                            await SetDeviceState(DeviceState.Idle);
+                            SetDeviceState(DeviceState.Idle);
                             _wakeWordDetect.StartDetection();
                             return;
                         }
@@ -363,7 +327,7 @@ namespace XiaoZhi.Unity
                         await _protocol.SendWakeWordDetected(wakeWord);
                         Debug.Log($"Wake word detected: {wakeWord}");
                         _keepListening = true;
-                        await SetDeviceState(DeviceState.Listening);
+                        SetDeviceState(DeviceState.Listening);
                     }
                     else if (_deviceState == DeviceState.Speaking)
                     {
@@ -371,7 +335,7 @@ namespace XiaoZhi.Unity
                     }
                     else if (_deviceState == DeviceState.Activating)
                     {
-                        await SetDeviceState(DeviceState.Idle);
+                        SetDeviceState(DeviceState.Idle);
                     }
 
                     _wakeWordDetect.StartDetection();
@@ -408,11 +372,8 @@ namespace XiaoZhi.Unity
             };
             _protocol.OnChannelClosed += () =>
             {
-                Schedule(async () =>
-                {
-                    display.SetChatMessage("system", "");
-                    await SetDeviceState(DeviceState.Idle);
-                });
+                display.SetChatMessage("system", "");
+                SetDeviceState(DeviceState.Idle);
             };
             _protocol.OnIncomingJson += message =>
             {
@@ -430,28 +391,24 @@ namespace XiaoZhi.Unity
                         {
                             case "start":
                             {
-                                Schedule(async () =>
-                                {
-                                    _aborted = false;
-                                    if (_deviceState is DeviceState.Idle or DeviceState.Listening)
-                                        await SetDeviceState(DeviceState.Speaking);
-                                });
+                                _aborted = false;
+                                if (_deviceState is DeviceState.Idle or DeviceState.Listening)
+                                    SetDeviceState(DeviceState.Speaking);
                                 break;
                             }
                             case "stop":
                             {
                                 if (_deviceState != DeviceState.Speaking) return;
-                                Schedule(async () =>
+                                UniTask.Void(async () =>
                                 {
-                                    await GetTask(AppTaskType.Background);
                                     if (_keepListening)
                                     {
                                         await _protocol.SendStartListening(ListenMode.AutoStop);
-                                        await SetDeviceState(DeviceState.Listening);
+                                        SetDeviceState(DeviceState.Listening);
                                     }
                                     else
                                     {
-                                        await SetDeviceState(DeviceState.Idle);
+                                        SetDeviceState(DeviceState.Idle);
                                     }
                                 });
                                 break;
@@ -459,11 +416,7 @@ namespace XiaoZhi.Unity
                             case "sentence_start":
                             {
                                 var text = message["text"].ToString();
-                                if (!string.IsNullOrEmpty(text))
-                                {
-                                    display.SetChatMessage("assistant", text);
-                                }
-
+                                if (!string.IsNullOrEmpty(text)) display.SetChatMessage("assistant", text);
                                 break;
                             }
                         }
@@ -473,11 +426,7 @@ namespace XiaoZhi.Unity
                     case "stt":
                     {
                         var text = message["text"].ToString();
-                        if (!string.IsNullOrEmpty(text))
-                        {
-                            display.SetChatMessage("user", text);
-                        }
-
+                        if (!string.IsNullOrEmpty(text)) display.SetChatMessage("user", text);
                         break;
                     }
                     case "llm":
@@ -491,7 +440,7 @@ namespace XiaoZhi.Unity
             _protocol.Start();
         }
 
-        private async Task CheckNewVersion()
+        private async UniTask CheckNewVersion()
         {
             var macAddr = Context.Instance.GetMacAddress();
             var boardName = Context.Instance.GetBoardName();
@@ -508,12 +457,12 @@ namespace XiaoZhi.Unity
                 {
                     if (!string.IsNullOrEmpty(_ota.ActivationCode))
                     {
-                        await SetDeviceState(DeviceState.Activating);
+                        SetDeviceState(DeviceState.Activating);
                         await ShowActivationCode();
                         for (var t = 0; t < 60; t++)
                         {
                             if (_deviceState == DeviceState.Idle) break;
-                            await Task.Delay(1000);
+                            await UniTask.Delay(1000);
                         }
 
                         if (_deviceState == DeviceState.Idle) break;
@@ -524,23 +473,8 @@ namespace XiaoZhi.Unity
                     }
                 }
 
-                await Task.Delay(1000);
+                await UniTask.Delay(1000);
             }
-        }
-
-        private Task GetTask(AppTaskType taskType)
-        {
-            return _taskMap[taskType];
-        }
-
-        private void SetTask(AppTaskType taskType, Task task)
-        {
-            _taskMap[taskType] = task;
-        }
-
-        private void InitializePlatform()
-        {
-
         }
     }
 }

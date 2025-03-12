@@ -17,9 +17,4 @@ public class Entry : MonoBehaviour
         }
         GUILayout.Label(Enum.GetName(typeof(DeviceState), App.Instance.GetDeviceState()), new GUIStyle() { fontSize = 50 });
     }
-
-    private void Update()
-    {
-        App.Instance.Update();
-    }
 }
