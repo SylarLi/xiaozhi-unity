@@ -1,0 +1,176 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#define DR_WAV_IMPLEMENTATION
+
+#include "dr_wav.h"
+#include "timing.h"
+#include "aecm_export.h"
+
+#ifndef nullptr
+#define nullptr 0
+#endif
+
+#ifndef MIN
+#define  MIN(A, B)        ((A) < (B) ? (A) : (B))
+#endif
+
+#include "aecm/echo_control_mobile.h"
+using namespace webrtc;
+
+//写wav文件
+void wavWrite_int16(char *filename, int16_t *buffer, size_t sampleRate, size_t totalSampleCount) {
+    drwav wav;
+    drwav_data_format format = {};
+    format.container = drwav_container_riff;     // <-- drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
+    format.format = DR_WAVE_FORMAT_PCM;          // <-- Any of the DR_WAVE_FORMAT_* codes.
+    format.channels = 1;
+    format.sampleRate = sampleRate;
+    format.bitsPerSample = 16;
+    drwav_init_file_write(&wav, filename, &format, NULL);
+    drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSampleCount, buffer);
+    drwav_uninit(&wav);
+    if (framesWritten != totalSampleCount) {
+        fprintf(stderr, "ERROR\n");
+        exit(1);
+    }
+}
+
+//读取wav文件
+int16_t *wavRead_int16(char *filename, uint32_t *sampleRate, uint64_t *totalSampleCount) {
+    unsigned int channels;
+    int16_t *buffer = drwav_open_file_and_read_pcm_frames_s16(filename, &channels, sampleRate, totalSampleCount, NULL);
+    if (buffer == nullptr) {
+        printf("读取wav文件失败.");
+    }
+    //仅仅处理单通道音频
+    if (channels != 1) {
+        drwav_free(buffer, NULL);
+        buffer = nullptr;
+        *sampleRate = 0;
+        *totalSampleCount = 0;
+    }
+    return buffer;
+}
+
+//分割路径函数
+void splitpath(const char *path, char *drv, char *dir, char *name, char *ext) {
+    const char *end;
+    const char *p;
+    const char *s;
+    if (path[0] && path[1] == ':') {
+        if (drv) {
+            *drv++ = *path++;
+            *drv++ = *path++;
+            *drv = '\0';
+        }
+    } else if (drv)
+        *drv = '\0';
+    for (end = path; *end && *end != ':';)
+        end++;
+    for (p = end; p > path && *--p != '\\' && *p != '/';)
+        if (*p == '.') {
+            end = p;
+            break;
+        }
+    if (ext)
+        for (s = end; (*ext = *s++);)
+            ext++;
+    for (p = end; p > path;)
+        if (*--p == '\\' || *p == '/') {
+            p++;
+            break;
+        }
+    if (name) {
+        for (s = p; s < end;)
+            *name++ = *s++;
+        *name = '\0';
+    }
+    if (dir) {
+        for (s = path; s < p;)
+            *dir++ = *s++;
+        *dir = '\0';
+    }
+}
+
+
+int aecProcess(int16_t *far_frame, int16_t *near_frame, uint32_t sampleRate, size_t samplesCount, int16_t nMode,
+               int16_t msInSndCardBuf) {
+    if (near_frame == nullptr) return -1;
+    if (far_frame == nullptr) return -1;
+    if (samplesCount == 0) return -1;
+    void *aecmInst = AECM_Create();
+    if (aecmInst == NULL) return -1;
+    int status = AECM_Init(aecmInst, sampleRate);//8000 or 16000 Sample rate
+    if (status != 0) {
+        printf("WebRtcAecm_Init fail\n");
+        AECM_Free(aecmInst);
+        return -1;
+    }
+    status = AECM_SetConfig(aecmInst, AecmTrue, nMode);
+    if (status != 0) {
+        printf("WebRtcAecm_set_config fail\n");
+        AECM_Free(aecmInst);
+        return -1;
+    }
+    AECM_Process(aecmInst, near_frame, far_frame, samplesCount, sampleRate, msInSndCardBuf);
+    AECM_Free(aecmInst);
+    return 1;
+}
+
+enum EchoMode {
+    kQuietEarpieceOrHeadset,
+    kEarpiece,
+    kLoudEarpiece,
+    kSpeakerphone,
+    kLoudSpeakerphone
+};
+
+void AECM(char *near_file, char *far_file, char *out_file) {
+    //音频采样率
+    uint32_t sampleRate = 0;
+    uint64_t inSampleCount = 0;
+    uint32_t ref_sampleRate = 0;
+    uint64_t ref_inSampleCount = 0;
+    int16_t *near_frame = wavRead_int16(near_file, &sampleRate, &inSampleCount);
+    int16_t *far_frame = wavRead_int16(far_file, &ref_sampleRate, &ref_inSampleCount);
+    if ((near_frame == nullptr || far_frame == nullptr)) {
+        if (near_frame) free(near_frame);
+        if (far_frame) free(far_frame);
+        return;
+    }
+    //如果加载成功
+    int16_t echoMode = 3;
+    int16_t msInSndCardBuf = 40;
+    double startTime = now();
+    aecProcess(far_frame, near_frame, sampleRate, inSampleCount, echoMode, msInSndCardBuf);
+    double elapsed_time = calcElapsed(startTime, now());
+    printf("time interval: %d ms\n ", (int) (elapsed_time * 1000));
+    wavWrite_int16(out_file, near_frame, sampleRate, inSampleCount);
+    free(near_frame);
+    free(far_frame);
+}
+
+int main(int argc, char *argv[]) {
+    printf("WebRTC Acoustic Echo Canceller for Mobile\n");
+    printf("blog:http://cpuimage.cnblogs.com/\n");
+    printf("usage : aecm far_file.wav near_file.wav\n");
+    if (argc < 3)
+        return -1;
+    // echo file
+    char *far_file = argv[1];
+    // mixed file
+    char *near_file = argv[2];
+    char drive[3];
+    char dir[256];
+    char fname[256];
+    char ext[256];
+    char out_file[1024];
+    splitpath(near_file, drive, dir, fname, ext);
+    sprintf(out_file, "%s%s%s_out%s", drive, dir, fname, ext);
+    AECM(near_file, far_file, out_file);
+    printf("press any key to exit. \n");
+    getchar();
+    return 0;
+}
