@@ -6,7 +6,7 @@
     "USE_AUDIO_PROCESSING": false,
     "USE_WAKE_WORD_DETECT": false,
     "AUDIO_INPUT_SAMPLE_RATE": 16000,
-    "AUDIO_OUTPUT_SAMPLE_RATE": 24000,
+    "AUDIO_OUTPUT_SAMPLE_RATE": 16000,
     "AUDIO_INPUT_RESAMPLE_RATE": 16000,
     "OTA_VERSION_URL": "https://api.tenclass.net/xiaozhi/ota/"
 }

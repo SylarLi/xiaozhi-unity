@@ -63,10 +63,10 @@ inline constexpr Dst saturated_cast(Src value) {
 
     // Should fail only on attempting to assign NaN to a saturated integer.
     case internal::TYPE_INVALID:
-      RTC_CHECK_NOTREACHED();
+      return std::numeric_limits<Dst>::quiet_NaN();
   }
 
-  RTC_CHECK_NOTREACHED();
+  return std::numeric_limits<Dst>::quiet_NaN();
 }
 
 }  //  namespace webrtc

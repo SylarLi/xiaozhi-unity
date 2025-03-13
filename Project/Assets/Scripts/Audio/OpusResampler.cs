@@ -39,7 +39,7 @@ namespace XiaoZhi.Unity
         public bool Process(ReadOnlySpan<short> input, out ReadOnlySpan<short> output)
         {
             var outputSamples = GetOutputSamples(input.Length);
-            if (_outputBuffer.Length < outputSamples) _outputBuffer = new short[Mathf.NextPowerOfTwo(outputSamples)];
+            Tools.EnsureMemory(ref _outputBuffer, outputSamples);
             int ret;
             unsafe
             {

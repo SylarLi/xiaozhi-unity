@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using Cysharp.Threading.Tasks;
+using XiaoZhi.Audio;
 using Object = UnityEngine.Object;
 
 namespace XiaoZhi.Unity
@@ -12,72 +13,74 @@ namespace XiaoZhi.Unity
 
         private readonly AudioSource _audioSource;
         private AudioClip _recordingClip;
-        private float[] _recordingBuffer;
-        private readonly int _recordingBufferSize;
         private int _recordingPosition;
-        private readonly float[] _playbackBuffer;
-        private int _playbackEndPosition;
-        private int _playbackReadPosition;
-        private readonly int _playbackBufferSize;
+        private readonly RingBuffer<short> _playbackBuffer;
+        private Memory<short> _shortBuffer;
+        private float[] _floatBuffer;
         private bool _isPlaying;
-        private readonly string _deviceName;
+        private int _deviceIndex;
+
+        private IntPtr _aecmInst;
+        private int _aecmSync;
 
         public UnityAudioCodec(int inputSampleRate, int outputSampleRate)
         {
             this.inputSampleRate = inputSampleRate;
             this.outputSampleRate = outputSampleRate;
-            inputChannels = 1;
             _audioSource = new GameObject(GetType().Name).AddComponent<AudioSource>();
             Object.DontDestroyOnLoad(_audioSource.gameObject);
-            _recordingBufferSize = inputSampleRate * RecordingBufferSec * inputChannels;
-            _playbackBufferSize = outputSampleRate * PlayingBufferSec;
-            _playbackBuffer = new float[_playbackBufferSize];
-            _playbackEndPosition = 0;
-            _playbackReadPosition = 0;
+            var playbackBufferSize = outputSampleRate * PlayingBufferSec;
+            _playbackBuffer = new RingBuffer<short>(playbackBufferSize);
             _isPlaying = false;
-            var playbackClip = AudioClip.Create("StreamPlayback", _playbackBufferSize, outputChannels, outputSampleRate,
+            var playbackClip = AudioClip.Create("StreamPlayback", playbackBufferSize, outputChannels, outputSampleRate,
                 true, OnAudioRead);
             _audioSource.clip = playbackClip;
             _audioSource.loop = true;
-            if (Microphone.devices.Length == 0)
-                throw new NotSupportedException("没有可用的录音设备");
-            _deviceName = Microphone.devices[0];
+            _deviceIndex = 0;
+
+            _aecmInst = AECMWrapper.AECM_Create();
+            AECMWrapper.AECM_Init(_aecmInst, 16000);
+            AECMWrapper.AECM_SetConfig(_aecmInst);
+        }
+
+        public override void Dispose()
+        {
+            if (_aecmInst != IntPtr.Zero)
+            {
+                AECMWrapper.AECM_Free(_aecmInst);
+                _aecmInst = IntPtr.Zero;
+            }
+        }
+
+        ~UnityAudioCodec()
+        {
+            Dispose();
         }
 
         private void OnAudioRead(float[] data)
         {
-            var readLen = Mathf.Min(data.Length,
-                (_playbackEndPosition < _playbackReadPosition
-                    ? _playbackEndPosition + _playbackBufferSize
-                    : _playbackEndPosition) - _playbackReadPosition);
-            if (readLen > 0)
-            {
-                var dataOffset = 0;
-                var leftLen = _playbackBufferSize - _playbackReadPosition;
-                if (readLen > leftLen)
-                {
-                    Array.Copy(_playbackBuffer, _playbackReadPosition, data, dataOffset, leftLen);
-                    _playbackReadPosition = 0;
-                    readLen -= leftLen;
-                    dataOffset += leftLen;
-                }
-
-                Array.Copy(_playbackBuffer, _playbackReadPosition, data, dataOffset, readLen);
-                _playbackReadPosition += readLen;
-            }
-
+            var readPos = _playbackBuffer.ReadPosition;
+            var readLen = Mathf.Min(data.Length, _playbackBuffer.Count);
+            Tools.EnsureMemory(ref _shortBuffer, readLen);
+            var readBuffer = _shortBuffer.Span;
+            if (!_playbackBuffer.TryRead(readBuffer[..readLen])) readLen = 0;
+            for (var i = 0; i < readLen; i++)
+                data[i] = (float)readBuffer[i] / short.MaxValue;
             data.AsSpan(readLen).Clear();
+            var readTime = DateTime.Now;
+            UniTask.Post(() =>
+            {
+                readPos += (int)((DateTime.Now - readTime).TotalSeconds * inputSampleRate);
+                _aecmSync = readPos - _audioSource.timeSamples;
+            });
         }
 
         protected override int Write(ReadOnlySpan<short> data)
         {
             if (!outputEnabled)
                 return 0;
-            var samples = data.Length;
-            var position = _playbackEndPosition;
-            for (var i = 0; i < samples; i++)
-                _playbackBuffer[(position + i) % _playbackBufferSize] = data[i] / (float)short.MaxValue;
-            _playbackEndPosition = (position + samples) % _playbackBufferSize;
+            if (!_playbackBuffer.TryWrite(data))
+                return 0;
             if (!_isPlaying)
             {
                 _isPlaying = true;
@@ -91,7 +94,7 @@ namespace XiaoZhi.Unity
                 });
             }
 
-            return samples;
+            return data.Length;
         }
 
         public override void EnableOutput(bool enable)
@@ -99,8 +102,7 @@ namespace XiaoZhi.Unity
             if (outputEnabled == enable) return;
             if (!enable)
             {
-                _playbackReadPosition = 0;
-                _playbackEndPosition = 0;
+                _playbackBuffer.Clear();
                 _isPlaying = false;
                 UniTask.Post(() =>
                 {
@@ -114,52 +116,104 @@ namespace XiaoZhi.Unity
 
         protected override int Read(Span<short> dest)
         {
-            if (!inputEnabled || !Microphone.IsRecording(_deviceName))
+            var deviceName = Microphone.devices[_deviceIndex];
+            if (string.IsNullOrEmpty(deviceName))
                 return 0;
-            var position = Microphone.GetPosition(_deviceName);
+            if (!inputEnabled || !Microphone.IsRecording(deviceName))
+                return 0;
+            var position = Microphone.GetPosition(deviceName);
             if (position < 0) return 0;
-            _recordingBuffer ??= new float[dest.Length];
-            if (_recordingBuffer.Length < dest.Length) Array.Resize(ref _recordingBuffer, Mathf.NextPowerOfTwo(dest.Length));
-            var firstRead = 0;
-            if (position < _recordingPosition)
+            if (position < _recordingPosition) position += _recordingClip.samples;
+            var readLen = Mathf.Min(dest.Length, position - _recordingPosition);
+            _recordingPosition = ReadClip(_recordingClip, _recordingPosition, dest[..readLen]);
+            dest[readLen..].Clear();
+            Tools.EnsureMemory(ref _shortBuffer, readLen);
+            var syncPos = _aecmSync + _audioSource.timeSamples;
+            if (syncPos < 0) syncPos += _playbackBuffer.Count;
+            if (syncPos >= _playbackBuffer.Count) syncPos -= _playbackBuffer.Count;
+            _playbackBuffer.TryReadAt(syncPos, _shortBuffer.Span);
+            unsafe
             {
-                firstRead = Math.Min(dest.Length, _recordingBufferSize - _recordingPosition);
-                _recordingClip.GetData(_recordingBuffer, _recordingPosition);
-                for (var i = 0; i < firstRead; i++) dest[i] = (short)(_recordingBuffer[i] * short.MaxValue);
-                _recordingPosition = 0;
+                fixed (short* nearInput = dest)
+                fixed (short* farInput = _shortBuffer.Span)
+                    AECMWrapper.AECM_Process(_aecmInst, nearInput, farInput, dest.Length, inputSampleRate);
             }
 
-            var samplesToRead = Math.Min(dest.Length - firstRead, position - _recordingPosition);
-            if (samplesToRead <= 0) return firstRead;
-            _recordingClip.GetData(_recordingBuffer, _recordingPosition);
-            for (var i = 0; i < samplesToRead; i++) dest[i + firstRead] = (short)(_recordingBuffer[i] * short.MaxValue);
-            _recordingPosition += samplesToRead;
-            return firstRead + samplesToRead;
+            return readLen;
+        }
+
+        private int ReadClip(AudioClip clip, int position, Span<short> dest)
+        {
+            _floatBuffer ??= new float[dest.Length];
+            Tools.EnsureArray(ref _floatBuffer, dest.Length);
+            var clipSamples = clip.samples;
+            var endPosition = (position + dest.Length) % clipSamples;
+            var firstRead = 0;
+            if (endPosition < position)
+            {
+                firstRead = Math.Min(dest.Length, clipSamples - position);
+                clip.GetData(_floatBuffer, position);
+                for (var i = 0; i < firstRead; i++) dest[i] = (short)(_floatBuffer[i] * short.MaxValue);
+                position = 0;
+            }
+
+            var nextRead = endPosition - position;
+            if (nextRead > 0)
+            {
+                clip.GetData(_floatBuffer, position);
+                for (var i = 0; i < nextRead; i++) dest[i + firstRead] = (short)(_floatBuffer[i] * short.MaxValue);
+            }
+
+            return endPosition;
         }
 
         public override void EnableInput(bool enable)
         {
             if (inputEnabled == enable) return;
+            var deviceName = GetDeviceName();
+            if (string.IsNullOrEmpty(deviceName))
+                return;
             if (enable)
             {
-                if (!Microphone.IsRecording(_deviceName))
+                if (!Microphone.IsRecording(deviceName))
                 {
-                    Debug.Log($"开始录音：{_deviceName}");
-                    _recordingClip = Microphone.Start(_deviceName, true, RecordingBufferSec, inputSampleRate);
+                    Debug.Log($"开始录音：{deviceName}");
+                    _recordingClip = Microphone.Start(deviceName, true, RecordingBufferSec, inputSampleRate);
                     _recordingPosition = 0;
                 }
             }
             else
             {
-                if (Microphone.IsRecording(_deviceName))
+                if (Microphone.IsRecording(deviceName))
                 {
-                    Debug.Log($"停止录音：{_deviceName}");
-                    Microphone.End(_deviceName);
+                    Debug.Log($"停止录音：{deviceName}");
+                    Microphone.End(deviceName);
                     _recordingPosition = 0;
+                    Object.Destroy(_recordingClip);
+                    _recordingClip = null;
                 }
             }
 
             base.EnableInput(enable);
+        }
+
+        public override void SwitchInput()
+        {
+            _deviceIndex = (_deviceIndex + 1) % Microphone.devices.Length;
+            var deviceName = GetDeviceName();
+            if (!string.IsNullOrEmpty(deviceName))
+                Debug.Log($"切换录音设备：{deviceName}");
+        }
+
+        private string GetDeviceName()
+        {
+            if (Microphone.devices.Length == 0)
+            {
+                Debug.LogError("没有找到录音设备");
+                return string.Empty;
+            }
+
+            return Microphone.devices[_deviceIndex];
         }
     }
 }

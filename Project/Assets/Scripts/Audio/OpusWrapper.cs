@@ -7,8 +7,10 @@ namespace XiaoZhi.Unity
     {
 #if UNITY_IOS
         private const string LibraryName = "__Internal";
-#else
+#elif UNITY_ANDROID && !UNITY_EDITOR
         private const string LibraryName = "libopus";
+#else
+        private const string LibraryName = "opus";
 #endif
 
         public const int OPUS_APPLICATION_VOIP = 2048;

@@ -1,11 +1,12 @@
 using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace XiaoZhi.Unity
 {
-    public abstract class AudioCodec
+    public abstract class AudioCodec: IDisposable
     {
         protected bool inputEnabled;
 
@@ -55,7 +56,11 @@ namespace XiaoZhi.Unity
             EnableInput(true);
             EnableOutput(true);
         }
+        
+        public abstract void Dispose();
 
+        public abstract void SwitchInput();
+        
         public void OutputData(ReadOnlySpan<short> data)
         {
             Write(data);
@@ -66,10 +71,11 @@ namespace XiaoZhi.Unity
             const int duration = 30;
             var frameSize = inputSampleRate / 1000 * duration * inputChannels;
             if (_frameBuffer.Length < frameSize) _frameBuffer = new short[Mathf.NextPowerOfTwo(frameSize)];
-            var span = _frameBuffer.Slice(0, frameSize).Span;
-            var ret = Read(span) > 0;
+            var span = _frameBuffer[..frameSize].Span;
+            var len = Read(span);
+            _frameBuffer[len..].Span.Clear();
             data = span;
-            return ret;
+            return len > 0;
         }
 
         protected abstract int Read(Span<short> dest);

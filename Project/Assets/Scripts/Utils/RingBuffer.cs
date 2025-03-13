@@ -14,6 +14,8 @@ namespace XiaoZhi.Unity
         public int Capacity => _capacity;
         public bool IsEmpty => _count == 0;
         public bool IsFull => _count == _capacity;
+        public int WritePosition => _writePosition;
+        public int ReadPosition => _readPosition;
 
         public RingBuffer(int capacity)
         {
@@ -50,6 +52,17 @@ namespace XiaoZhi.Unity
             return true;
         }
 
+        public bool TryReadAt(int position, Span<T> destination)
+        {
+            if (_count == 0 || destination.Length == 0 || position < 0 || position >= _capacity || _count < destination.Length)
+                return false;
+            var readCount = destination.Length;
+            var firstRead = Math.Min(readCount, _capacity - position);
+            _buffer.Span.Slice(position, firstRead).CopyTo(destination);
+            if (firstRead < readCount)
+                _buffer.Span.Slice(0, readCount - firstRead).CopyTo(destination.Slice(firstRead));
+            return true;
+        }
         public void Clear()
         {
             _writePosition = 0;
