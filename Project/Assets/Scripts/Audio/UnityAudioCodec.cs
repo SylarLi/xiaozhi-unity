@@ -14,14 +14,13 @@ namespace XiaoZhi.Unity
         private readonly AudioSource _audioSource;
         private AudioClip _recordingClip;
         private int _recordingPosition;
-        private readonly RingBuffer<short> _playbackBuffer;
+        private readonly ClipStreamBuffer _playbackBuffer;
         private Memory<short> _shortBuffer;
         private float[] _floatBuffer;
         private bool _isPlaying;
         private int _deviceIndex;
 
         private IntPtr _aecmInst;
-        private int _aecmSync;
 
         public UnityAudioCodec(int inputSampleRate, int outputSampleRate)
         {
@@ -30,7 +29,7 @@ namespace XiaoZhi.Unity
             _audioSource = new GameObject(GetType().Name).AddComponent<AudioSource>();
             Object.DontDestroyOnLoad(_audioSource.gameObject);
             var playbackBufferSize = outputSampleRate * PlayingBufferSec;
-            _playbackBuffer = new RingBuffer<short>(playbackBufferSize);
+            _playbackBuffer = new ClipStreamBuffer(playbackBufferSize);
             _isPlaying = false;
             var playbackClip = AudioClip.Create("StreamPlayback", playbackBufferSize, outputChannels, outputSampleRate,
                 true, OnAudioRead);
@@ -59,28 +58,18 @@ namespace XiaoZhi.Unity
 
         private void OnAudioRead(float[] data)
         {
-            var readPos = _playbackBuffer.ReadPosition;
-            var readLen = Mathf.Min(data.Length, _playbackBuffer.Count);
+            var readLen = data.Length;
             Tools.EnsureMemory(ref _shortBuffer, readLen);
             var readBuffer = _shortBuffer.Span;
-            if (!_playbackBuffer.TryRead(readBuffer[..readLen])) readLen = 0;
+            _playbackBuffer.Read(_shortBuffer[..readLen].Span);
             for (var i = 0; i < readLen; i++)
                 data[i] = (float)readBuffer[i] / short.MaxValue;
-            data.AsSpan(readLen).Clear();
-            var readTime = DateTime.Now;
-            UniTask.Post(() =>
-            {
-                readPos += (int)((DateTime.Now - readTime).TotalSeconds * inputSampleRate);
-                _aecmSync = readPos - _audioSource.timeSamples;
-            });
         }
 
         protected override int Write(ReadOnlySpan<short> data)
         {
-            if (!outputEnabled)
-                return 0;
-            if (!_playbackBuffer.TryWrite(data))
-                return 0;
+            if (!outputEnabled) return 0;
+            _playbackBuffer.Buffer(data);
             if (!_isPlaying)
             {
                 _isPlaying = true;
@@ -128,10 +117,9 @@ namespace XiaoZhi.Unity
             _recordingPosition = ReadClip(_recordingClip, _recordingPosition, dest[..readLen]);
             dest[readLen..].Clear();
             Tools.EnsureMemory(ref _shortBuffer, readLen);
-            var syncPos = _aecmSync + _audioSource.timeSamples;
-            if (syncPos < 0) syncPos += _playbackBuffer.Count;
-            if (syncPos >= _playbackBuffer.Count) syncPos -= _playbackBuffer.Count;
-            _playbackBuffer.TryReadAt(syncPos, _shortBuffer.Span);
+            var playbackPos = _audioSource.timeSamples - readLen;
+            if (playbackPos < 0) playbackPos += _playbackBuffer.Capacity;
+            _playbackBuffer.ReadAt(playbackPos, _shortBuffer.Span);
             unsafe
             {
                 fixed (short* nearInput = dest)

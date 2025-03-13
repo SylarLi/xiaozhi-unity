@@ -41,6 +41,7 @@ namespace XiaoZhi.Unity
 
         public async void Start()
         {
+            Application.runInBackground = true;
             InitializeTask();
             InitializePlatform();
             var display = Context.Instance.Display;

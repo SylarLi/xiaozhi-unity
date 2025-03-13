@@ -44,7 +44,7 @@ namespace XiaoZhi.Audio
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe int AECM_Process(IntPtr aecmInst, short* nearInput, short* farInput,
-            long inSampleCount, int inSampleRate, int msInSndCardBuf = 50);
+            long inSampleCount, int inSampleRate, int msInSndCardBuf = 60);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void AECM_Free(IntPtr aecmInst);
