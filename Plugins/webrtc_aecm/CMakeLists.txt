@@ -29,8 +29,6 @@ if(ANDROID)
   endif()
 endif()
 
-# ... existing code ...
-
 # 平台检测和定义
 if(WIN32)
   add_definitions(-DWEBRTC_WIN)
