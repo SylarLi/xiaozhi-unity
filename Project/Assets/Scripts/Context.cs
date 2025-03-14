@@ -21,7 +21,7 @@ namespace XiaoZhi.Unity
         {
             Uuid = Guid.NewGuid().ToString("d");
             Display = new UIDisplay();
-            AudioCodec = new UnityAudioCodec(Config.Instance.AudioInputSampleRate,
+            AudioCodec = new FMODAudioCodec(Config.Instance.AudioInputSampleRate,
                 Config.Instance.AudioOutputSampleRate);
         }
 

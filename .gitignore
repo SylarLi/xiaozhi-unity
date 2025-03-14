@@ -9,3 +9,7 @@ Project/.idea
 Project/obj
 .vscode
 Project/Project.sln.DotSettings.user
+Project/Assets/Plugins/FMOD/Cache
+Project/Assets/Plugins/FMOD/Cache.meta
+Project/Assets/StreamingAssets/**/*.bank
+Project/Assets/StreamingAssets/**/*.bank.meta

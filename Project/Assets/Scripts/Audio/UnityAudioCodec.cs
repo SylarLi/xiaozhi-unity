@@ -11,8 +11,7 @@ namespace XiaoZhi.Unity
     {
         private const int RecordingBufferSec = 8;
         private const int PlayingBufferSec = 4;
-
-        private readonly int _kSampleRate;
+        
         private AudioSource _audioSource;
         private AudioClip _recordingClip;
         private int _recordingPosition;
@@ -22,10 +21,11 @@ namespace XiaoZhi.Unity
         private bool _isPlaying;
         private int _deviceIndex;
 
-        private IntPtr _aecmInst;
-        private int _aecmCompensation;
-        private int _aecmRenderDelay;
-        private int _aecmProcessDelay;
+        // private readonly int _kSampleRate;
+        // private IntPtr _aecmInst;
+        // private int _aecmCompensation;
+        // private int _aecmRenderDelay;
+        // private int _aecmProcessDelay;
 
         public UnityAudioCodec(int inputSampleRate, int outputSampleRate)
         {
@@ -33,19 +33,19 @@ namespace XiaoZhi.Unity
             this.outputSampleRate = outputSampleRate;
             var playbackBufferSize = outputSampleRate * PlayingBufferSec;
             _playbackBuffer = new ClipStreamBuffer(playbackBufferSize);
-            _kSampleRate = Mathf.Min(inputSampleRate / 100, 160);
-            _aecmInst = AECMWrapper.AECM_Create();
-            AECMWrapper.AECM_Init(_aecmInst, _kSampleRate * 100);
-            AECMWrapper.AECM_SetConfig(_aecmInst);
+            // _kSampleRate = Mathf.Min(inputSampleRate / 100, 160);
+            // _aecmInst = AECMWrapper.AECM_Create();
+            // AECMWrapper.AECM_Init(_aecmInst, _kSampleRate * 100);
+            // AECMWrapper.AECM_SetConfig(_aecmInst);
         }
 
         public override void Dispose()
         {
-            if (_aecmInst != IntPtr.Zero)
-            {
-                AECMWrapper.AECM_Free(_aecmInst);
-                _aecmInst = IntPtr.Zero;
-            }
+            // if (_aecmInst != IntPtr.Zero)
+            // {
+            //     AECMWrapper.AECM_Free(_aecmInst);
+            //     _aecmInst = IntPtr.Zero;
+            // }
         }
 
         ~UnityAudioCodec()
@@ -58,28 +58,36 @@ namespace XiaoZhi.Unity
             var dataLen = data.Length;
             Tools.EnsureMemory(ref _shortBuffer, dataLen);
             var readBuffer = _shortBuffer.Span;
-            var readPos = _playbackBuffer.ReadPosition;
+            // var readPos = _playbackBuffer.ReadPosition;
             var readLen = _playbackBuffer.Read(readBuffer[..dataLen]);
             for (var i = 0; i < readLen; i++)
                 data[i] = (float)readBuffer[i] / short.MaxValue;
             data.AsSpan(readLen).Clear();
 
-            dataLen += _aecmCompensation;
-            Tools.EnsureMemory(ref _shortBuffer, dataLen);
-            readBuffer = _shortBuffer.Span;
-            var aecmLen = dataLen / _kSampleRate * _kSampleRate;
-            var aecmPos = readPos - _aecmCompensation;
-            if (aecmPos < 0) aecmPos += _playbackBuffer.Capacity;
-            _playbackBuffer.ReadAt(aecmPos, readBuffer[..aecmLen]);
-            unsafe
-            {
-                fixed (short* farInput = readBuffer)
-                    AECMWrapper.AECM_BufferFarend(_aecmInst, farInput, aecmLen, inputSampleRate);
-            }
-
-            _aecmCompensation = dataLen - aecmLen;
-            _aecmRenderDelay = data.Length * 1000 / inputSampleRate;
-            Debug.Log(_aecmRenderDelay);
+            // dataLen += _aecmCompensation;
+            // Tools.EnsureMemory(ref _shortBuffer, dataLen);
+            // readBuffer = _shortBuffer.Span;
+            // var aecmLen = dataLen / _kSampleRate * _kSampleRate;
+            // var aecmPos = readPos - _aecmCompensation;
+            // if (aecmPos < 0) aecmPos += _playbackBuffer.Capacity;
+            // _playbackBuffer.ReadAt(aecmPos, readBuffer[..aecmLen]);
+            // unsafe
+            // {
+            //     fixed (short* farInput = readBuffer)
+            //         AECMWrapper.AECM_BufferFarend(_aecmInst, farInput, aecmLen, inputSampleRate);
+            // }
+            //
+            // _aecmCompensation = dataLen - aecmLen;
+            //
+            // var now = DateTime.Now;
+            // UniTask.Post(() =>
+            // {
+            //     var delay = readPos - _audioSource.timeSamples;
+            //     delay += (int)((DateTime.Now - now).TotalMilliseconds * inputSampleRate / 1000);
+            //     if (delay < 0) delay += _playbackBuffer.Capacity;
+            //     _aecmRenderDelay = delay;
+            //     Debug.Log(_aecmRenderDelay / (float)inputSampleRate * 1000);
+            // });
         }
 
         protected override int Write(ReadOnlySpan<short> data)
@@ -137,17 +145,17 @@ namespace XiaoZhi.Unity
             var readLen = Mathf.Min(dest.Length, readMax);
             _recordingPosition = ReadClip(_recordingClip, _recordingPosition, dest[..readLen]);
             dest[readLen..].Clear();
-            if (_audioSource && readLen >= _kSampleRate)
-            {
-                var scale = readLen / _kSampleRate;
-                if (readLen % _kSampleRate != 0) scale++;
-                var aecmLen = Mathf.Min(scale * _kSampleRate, dest.Length);
-                unsafe
-                {
-                    fixed (short* nearInput = dest)
-                        AECMWrapper.AECM_Process(_aecmInst, nearInput, null, aecmLen, inputSampleRate);
-                }
-            }
+            // if (_audioSource && readLen >= _kSampleRate)
+            // {
+            //     var scale = readLen / _kSampleRate;
+            //     if (readLen % _kSampleRate != 0) scale++;
+            //     var aecmLen = Mathf.Min(scale * _kSampleRate, dest.Length);
+            //     unsafe
+            //     {
+            //         fixed (short* nearInput = dest)
+            //             AECMWrapper.AECM_Process(_aecmInst, nearInput, null, aecmLen, inputSampleRate);
+            //     }
+            // }
 
             return readLen;
         }
