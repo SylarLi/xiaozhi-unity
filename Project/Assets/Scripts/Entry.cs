@@ -18,7 +18,7 @@ public class Entry : MonoBehaviour
         GUILayout.Label(Enum.GetName(typeof(DeviceState), App.Instance.GetDeviceState()), new GUIStyle() { fontSize = 50 });
         if (GUILayout.Button("Microphone", GUILayout.Width(300), GUILayout.Height(300)))
         {
-            Context.Instance.AudioCodec.SwitchInput();
+            (Context.Instance.AudioCodec as UnityAudioCodec)!.SwitchInputDevice();
         }
     }
 }

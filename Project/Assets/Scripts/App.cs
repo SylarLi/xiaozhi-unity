@@ -60,7 +60,7 @@ namespace XiaoZhi.Unity
             var codec = Context.Instance.AudioCodec;
             while (true)
             {
-                await UniTask.Delay(30);
+                await UniTask.Yield(PlayerLoopTiming.Update);
                 switch (_deviceState)
                 {
                     case DeviceState.Listening:
@@ -120,6 +120,7 @@ namespace XiaoZhi.Unity
                     display.SetEmotion("neutral");
                     ResetDecoder();
                     _opusEncoder.ResetState();
+                    codec.EnableInput(true);
                     if (Config.Instance.UseAudioProcessing) _audioProcessor.Start();
                     break;
 
@@ -127,6 +128,7 @@ namespace XiaoZhi.Unity
                     display.SetStatus("正在说话");
                     ResetDecoder();
                     codec.EnableOutput(true);
+                    codec.EnableInput(false);
                     if (Config.Instance.UseAudioProcessing) _audioProcessor.Stop();
                     break;
                 case DeviceState.Starting:

@@ -184,7 +184,8 @@ namespace XiaoZhi.Unity
 
         public override async UniTask SendAudio(ReadOnlyMemory<byte> audioData)
         {
-            if (!_isConnected || !_isAudioChannelOpen) throw new InvalidOperationException("Audio channel is not open");
+            if (!_isConnected || !_isAudioChannelOpen || _webSocket.State != WebSocketState.Open)
+                throw new InvalidOperationException("Audio channel is not open");
             await _webSocket.SendAsync(
                 audioData,
                 WebSocketMessageType.Binary,

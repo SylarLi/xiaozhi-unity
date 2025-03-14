@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using Cysharp.Threading.Tasks;
+using UnityEngine.Assertions;
 using XiaoZhi.Audio;
 using Object = UnityEngine.Object;
 
@@ -8,10 +9,11 @@ namespace XiaoZhi.Unity
 {
     public class UnityAudioCodec : AudioCodec
     {
-        private const int RecordingBufferSec = 4;
+        private const int RecordingBufferSec = 8;
         private const int PlayingBufferSec = 4;
 
-        private readonly AudioSource _audioSource;
+        private readonly int _kSampleRate;
+        private AudioSource _audioSource;
         private AudioClip _recordingClip;
         private int _recordingPosition;
         private readonly ClipStreamBuffer _playbackBuffer;
@@ -21,24 +23,19 @@ namespace XiaoZhi.Unity
         private int _deviceIndex;
 
         private IntPtr _aecmInst;
+        private int _aecmCompensation;
+        private int _aecmRenderDelay;
+        private int _aecmProcessDelay;
 
         public UnityAudioCodec(int inputSampleRate, int outputSampleRate)
         {
             this.inputSampleRate = inputSampleRate;
             this.outputSampleRate = outputSampleRate;
-            _audioSource = new GameObject(GetType().Name).AddComponent<AudioSource>();
-            Object.DontDestroyOnLoad(_audioSource.gameObject);
             var playbackBufferSize = outputSampleRate * PlayingBufferSec;
             _playbackBuffer = new ClipStreamBuffer(playbackBufferSize);
-            _isPlaying = false;
-            var playbackClip = AudioClip.Create("StreamPlayback", playbackBufferSize, outputChannels, outputSampleRate,
-                true, OnAudioRead);
-            _audioSource.clip = playbackClip;
-            _audioSource.loop = true;
-            _deviceIndex = 0;
-
+            _kSampleRate = Mathf.Min(inputSampleRate / 100, 160);
             _aecmInst = AECMWrapper.AECM_Create();
-            AECMWrapper.AECM_Init(_aecmInst, 16000);
+            AECMWrapper.AECM_Init(_aecmInst, _kSampleRate * 100);
             AECMWrapper.AECM_SetConfig(_aecmInst);
         }
 
@@ -58,12 +55,31 @@ namespace XiaoZhi.Unity
 
         private void OnAudioRead(float[] data)
         {
-            var readLen = data.Length;
-            Tools.EnsureMemory(ref _shortBuffer, readLen);
+            var dataLen = data.Length;
+            Tools.EnsureMemory(ref _shortBuffer, dataLen);
             var readBuffer = _shortBuffer.Span;
-            _playbackBuffer.Read(_shortBuffer[..readLen].Span);
+            var readPos = _playbackBuffer.ReadPosition;
+            var readLen = _playbackBuffer.Read(readBuffer[..dataLen]);
             for (var i = 0; i < readLen; i++)
                 data[i] = (float)readBuffer[i] / short.MaxValue;
+            data.AsSpan(readLen).Clear();
+
+            dataLen += _aecmCompensation;
+            Tools.EnsureMemory(ref _shortBuffer, dataLen);
+            readBuffer = _shortBuffer.Span;
+            var aecmLen = dataLen / _kSampleRate * _kSampleRate;
+            var aecmPos = readPos - _aecmCompensation;
+            if (aecmPos < 0) aecmPos += _playbackBuffer.Capacity;
+            _playbackBuffer.ReadAt(aecmPos, readBuffer[..aecmLen]);
+            unsafe
+            {
+                fixed (short* farInput = readBuffer)
+                    AECMWrapper.AECM_BufferFarend(_aecmInst, farInput, aecmLen, inputSampleRate);
+            }
+
+            _aecmCompensation = dataLen - aecmLen;
+            _aecmRenderDelay = data.Length * 1000 / inputSampleRate;
+            Debug.Log(_aecmRenderDelay);
         }
 
         protected override int Write(ReadOnlySpan<short> data)
@@ -73,14 +89,11 @@ namespace XiaoZhi.Unity
             if (!_isPlaying)
             {
                 _isPlaying = true;
-                UniTask.Post(() =>
+                if (!_audioSource.isPlaying)
                 {
-                    if (!_audioSource.isPlaying)
-                    {
-                        _audioSource.volume = outputVolume / 100f;
-                        _audioSource.Play();
-                    }
-                });
+                    _audioSource.volume = outputVolume / 100f;
+                    _audioSource.Play();
+                }
             }
 
             return data.Length;
@@ -93,11 +106,18 @@ namespace XiaoZhi.Unity
             {
                 _playbackBuffer.Clear();
                 _isPlaying = false;
-                UniTask.Post(() =>
-                {
-                    if (_audioSource.isPlaying)
-                        _audioSource.Stop();
-                });
+                if (_audioSource.isPlaying)
+                    _audioSource.Stop();
+            }
+            else if (!_audioSource)
+            {
+                _audioSource = new GameObject(GetType().Name).AddComponent<AudioSource>();
+                Object.DontDestroyOnLoad(_audioSource.gameObject);
+                var playbackClip = AudioClip.Create("StreamPlayback", _playbackBuffer.Capacity, outputChannels,
+                    outputSampleRate,
+                    true, OnAudioRead);
+                _audioSource.clip = playbackClip;
+                _audioSource.loop = true;
             }
 
             base.EnableOutput(enable);
@@ -111,20 +131,22 @@ namespace XiaoZhi.Unity
             if (!inputEnabled || !Microphone.IsRecording(deviceName))
                 return 0;
             var position = Microphone.GetPosition(deviceName);
-            if (position < 0) return 0;
+            if (position < 0 || position == _recordingPosition) return 0;
             if (position < _recordingPosition) position += _recordingClip.samples;
-            var readLen = Mathf.Min(dest.Length, position - _recordingPosition);
+            var readMax = position - _recordingPosition;
+            var readLen = Mathf.Min(dest.Length, readMax);
             _recordingPosition = ReadClip(_recordingClip, _recordingPosition, dest[..readLen]);
             dest[readLen..].Clear();
-            Tools.EnsureMemory(ref _shortBuffer, readLen);
-            var playbackPos = _audioSource.timeSamples - readLen;
-            if (playbackPos < 0) playbackPos += _playbackBuffer.Capacity;
-            _playbackBuffer.ReadAt(playbackPos, _shortBuffer.Span);
-            unsafe
+            if (_audioSource && readLen >= _kSampleRate)
             {
-                fixed (short* nearInput = dest)
-                fixed (short* farInput = _shortBuffer.Span)
-                    AECMWrapper.AECM_Process(_aecmInst, nearInput, farInput, dest.Length, inputSampleRate);
+                var scale = readLen / _kSampleRate;
+                if (readLen % _kSampleRate != 0) scale++;
+                var aecmLen = Mathf.Min(scale * _kSampleRate, dest.Length);
+                unsafe
+                {
+                    fixed (short* nearInput = dest)
+                        AECMWrapper.AECM_Process(_aecmInst, nearInput, null, aecmLen, inputSampleRate);
+                }
             }
 
             return readLen;
@@ -165,27 +187,19 @@ namespace XiaoZhi.Unity
             {
                 if (!Microphone.IsRecording(deviceName))
                 {
-                    Debug.Log($"开始录音：{deviceName}");
                     _recordingClip = Microphone.Start(deviceName, true, RecordingBufferSec, inputSampleRate);
                     _recordingPosition = 0;
                 }
-            }
-            else
-            {
-                if (Microphone.IsRecording(deviceName))
+                else
                 {
-                    Debug.Log($"停止录音：{deviceName}");
-                    Microphone.End(deviceName);
-                    _recordingPosition = 0;
-                    Object.Destroy(_recordingClip);
-                    _recordingClip = null;
+                    _recordingPosition = Microphone.GetPosition(deviceName);
                 }
             }
 
             base.EnableInput(enable);
         }
 
-        public override void SwitchInput()
+        public void SwitchInputDevice()
         {
             _deviceIndex = (_deviceIndex + 1) % Microphone.devices.Length;
             var deviceName = GetDeviceName();

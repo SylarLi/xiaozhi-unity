@@ -29,7 +29,10 @@ RTC_EXPORT int32_t AECM_Init(void* aecmInst, int32_t sampFreq);
  */
 RTC_EXPORT int32_t AECM_SetConfig(void* aecmInst, int16_t cngMode, int16_t echoMode);
 
-RTC_EXPORT int32_t AECM_Process(void* aecmInst, int16_t* nearInput, int16_t* farInput, 
+RTC_EXPORT int32_t AECM_BufferFarend(void* aecmInst, const int16_t* farInput, size_t inSampleCount, 
+                                     int32_t inSampleRate);
+
+RTC_EXPORT int32_t AECM_Process(void* aecmInst, int16_t* nearInput, int16_t* cleanInput, 
                                 size_t inSampleCount, int32_t inSampleRate, int16_t msInSndCardBuf);
 
 RTC_EXPORT void AECM_Free(void* aecmInst);

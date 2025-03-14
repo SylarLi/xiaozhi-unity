@@ -22,24 +22,33 @@ int32_t AECM_SetConfig(void* aecmInst, int16_t cngMode, int16_t echoMode) {
     return WebRtcAecm_set_config(aecmInst, config);
 }
 
-int32_t AECM_Process(void* aecmInst, int16_t* nearInput, int16_t* farInput, 
+int32_t AECM_BufferFarend(void* aecmInst, const int16_t* farInput, size_t inSampleCount,
+                          int32_t inSampleRate) {
+    size_t kInSampleRate = inSampleRate / 100;
+    size_t numFrames = kInSampleRate < kMaxSplitFrameLength ? kInSampleRate : kMaxSplitFrameLength;
+    int32_t nCount = inSampleCount / numFrames;
+    for (int32_t i = 0; i < nCount; i++) {
+        int32_t nRet = WebRtcAecm_BufferFarend(aecmInst, farInput, numFrames);
+        if (nRet!= 0) {
+            return nRet;
+        }
+        farInput += numFrames;
+    }
+}
+
+int32_t AECM_Process(void* aecmInst, int16_t* nearInput, int16_t* cleanInput, 
                     size_t inSampleCount, int32_t inSampleRate, int16_t msInSndCardBuf) {
     size_t kInSampleRate = inSampleRate / 100;
     size_t numFrames = kInSampleRate < kMaxSplitFrameLength ? kInSampleRate : kMaxSplitFrameLength;
     int32_t nCount = inSampleCount / numFrames;
     int16_t outBuffer[kMaxSplitFrameLength];
     for (int32_t i = 0; i < nCount; i++) {
-        int nRet = WebRtcAecm_BufferFarend(aecmInst, farInput, numFrames);
-        if (nRet != 0) {
-            return -1;
-        }
-        nRet = WebRtcAecm_Process(aecmInst, nearInput, NULL, outBuffer, numFrames, msInSndCardBuf);
+        int32_t nRet = WebRtcAecm_Process(aecmInst, nearInput, cleanInput, outBuffer, numFrames, msInSndCardBuf);
         if (nRet != 0) {
             return nRet;
         }
         memcpy(nearInput, outBuffer, numFrames * sizeof(int16_t));
         nearInput += numFrames;
-        farInput += numFrames;
     }
 }
 

@@ -8,8 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 设置编译优化选项
 if(MSVC)
   # Windows/MSVC编译选项
-  add_compile_options(/W4 /O2 /Oi /GL)
-  add_link_options(/LTCG)
+  add_compile_options(/W4)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 else()
   # GCC/Clang编译选项
@@ -57,6 +56,9 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
     endif()
   endif()
 endif()
+
+# 设置导出符号
+add_definitions(-DWEBRTC_LIBRARY_IMPL -DWEBRTC_ENABLE_SYMBOL_EXPORT)
 
 # 设置包含目录
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -107,11 +109,9 @@ set_target_properties(webrtc_aecm PROPERTIES
   PUBLIC_HEADER "aecm_export.h"
 )
 
-# 添加导出宏定义
 target_compile_definitions(webrtc_aecm
   PRIVATE WEBRTC_DLL
-  PUBLIC WEBRTC_DLL_EXPORT
-)
+  PUBLIC WEBRTC_DLL_EXPORT)
 
 # 安装规则
 include(GNUInstallDirs)
