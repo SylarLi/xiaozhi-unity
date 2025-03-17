@@ -26,5 +26,12 @@ namespace XiaoZhi.Unity
             if (span.Length < length) 
                 span = new T[Mathf.NextPowerOfTwo(length)];
         }
+
+        public static int Repeat(int value, int length)
+        {
+            value %= length;
+            if (value < 0) value += length;
+            return value;
+        }
     }
 }

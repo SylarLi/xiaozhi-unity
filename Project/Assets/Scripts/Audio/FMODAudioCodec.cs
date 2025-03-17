@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -13,44 +14,43 @@ namespace XiaoZhi.Unity
 {
     public class FMODAudioCodec : AudioCodec
     {
-        private const int RecordingBufferSec = 8;
-        private const int PlaybackBufferSec = 2;
-        private const int PlaybackBufferDelayMs = 10;
+        private const int RecorderBufferSec = 8;
+        private const int PlayerBufferSec = 2;
 
         private CancellationTokenSource _updateCts;
 
-        private Sound _recordingSound;
-        private readonly int _recordingBufferSize;
+        private Sound _recorder;
         private int _readPosition;
-        private Sound _playbackSound;
-        private Channel _playbackChannel;
+        private Memory<short> _readBuffer;
+        private Sound _player;
+        private Channel _playerChannel;
         private int _writePosition;
-        private readonly int _playbackBufferSize;
-        private readonly int _playbackBufferDelaySize;
+        private bool _playerResetFlag;
         private Memory<short> _shortBuffer;
         private int _deviceIndex;
 
         private readonly IntPtr _aecmInst;
-        private readonly int _aecmFrameSize;
-        private int _aecmFramePos;
-        private int _aecmRenderDelay;
-        private int _aecmCaptureDelay;
+        private readonly OpusResampler _aecmResampler;
+        private int _aecmPlayerPos;
+        private int _aecmRecorderPos;
+        private DateTime _aecmAnchorTime;
 
         public FMODAudioCodec(int inputSampleRate, int outputSampleRate)
         {
             this.inputSampleRate = inputSampleRate;
             this.outputSampleRate = outputSampleRate;
-            _playbackBufferSize = outputChannels * outputSampleRate * PlaybackBufferSec;
-            _recordingBufferSize = inputChannels * inputSampleRate * RecordingBufferSec;
-            _playbackBufferDelaySize = outputSampleRate * outputChannels / 1000 * PlaybackBufferDelayMs;
 
-            _aecmFrameSize = Math.Min(inputSampleRate / 100, 160);
+            var aecmFrameSize = Math.Min(inputSampleRate / 100, 160);
             _aecmInst = AECMWrapper.AECM_Create();
-            AECMWrapper.AECM_Init(_aecmInst, _aecmFrameSize * 100);
+            AECMWrapper.AECM_Init(_aecmInst, aecmFrameSize * 100);
             AECMWrapper.AECM_SetConfig(_aecmInst);
+            _aecmResampler = new OpusResampler();
+            _aecmResampler.Configure(outputSampleRate, inputSampleRate);
 
             _updateCts = new CancellationTokenSource();
             UniTask.Void(Update, _updateCts.Token);
+
+            InitPlayer();
         }
 
         public override void Dispose()
@@ -62,23 +62,8 @@ namespace XiaoZhi.Unity
                 _updateCts = null;
             }
 
-            if (_playbackChannel.hasHandle())
-            {
-                _playbackChannel.stop();
-                _playbackChannel.clearHandle();
-            }
-
-            if (_playbackSound.hasHandle())
-            {
-                _playbackSound.release();
-                _playbackSound.clearHandle();
-            }
-
-            if (_recordingSound.hasHandle())
-            {
-                _recordingSound.release();
-                _recordingSound.clearHandle();
-            }
+            ClearPlayer();
+            ClearRecorder();
         }
 
         private async UniTaskVoid Update(CancellationToken token)
@@ -86,194 +71,238 @@ namespace XiaoZhi.Unity
             while (!token.IsCancellationRequested)
             {
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
-                if (!outputEnabled || !_playbackChannel.hasHandle()) continue;
-                _playbackChannel.getPosition(out var pos, TIMEUNIT.PCM);
-                var playbackPos = (int)pos;
+                if (!outputEnabled) continue;
+                _playerChannel.getPosition(out var pos, TIMEUNIT.PCM);
+                var playerPos = (int)pos;
+                _player.getLength(out var length, TIMEUNIT.PCM);
+                var playerLen = (int)length;
                 var playbackEnd = _writePosition;
-                if (playbackPos - playbackEnd > _playbackBufferSize / 2) playbackEnd += _playbackBufferSize;
-                if (playbackPos >= playbackEnd)
+                if (playerPos - playbackEnd > playerLen / 2) playbackEnd += playerLen;
+                var minOutputBuffer = Mathf.CeilToInt(outputSampleRate * outputChannels * Time.deltaTime);
+                if (playbackEnd - playerPos < minOutputBuffer)
                 {
-                    _writePosition = playbackPos;
-                    SetPlaybackPause(true);
-                }
-                else
-                {
-                    if (playbackEnd - playbackPos >= _playbackBufferDelaySize) SetPlaybackPause(false);
-                    var framePos = playbackPos / _aecmFrameSize;
-                    if (playbackPos % _aecmFrameSize != 0) framePos += 1;
-                    var stepFrames =
-                        Mathf.CeilToInt(outputSampleRate * outputChannels * Time.deltaTime / _aecmFrameSize) + 1;
-                    var endFramePos = Math.Min(framePos + stepFrames, playbackEnd / _aecmFrameSize);
-                    if (framePos < _aecmFramePos) framePos = _aecmFramePos;
-                    if (framePos < endFramePos)
-                    {
-                        var bufferPos = framePos * _aecmFrameSize;
-                        var bufferLen = (endFramePos - framePos) * _aecmFrameSize;
-                        Tools.EnsureMemory(ref _shortBuffer, bufferLen);
-                        FMODHelper.ReadPCM16(_playbackSound, bufferPos, _shortBuffer.Span[..bufferLen]);
-                        unsafe
-                        {
-                            fixed (short* farInput = _shortBuffer.Span)
-                                AECMWrapper.AECM_BufferFarend(_aecmInst, farInput, bufferLen, outputSampleRate);
-                        }
-
-                        var frameLen = _playbackBufferSize / _aecmFrameSize;
-                        if (endFramePos >= frameLen) endFramePos -= frameLen;
-                        _aecmFramePos = endFramePos;
-                        _aecmRenderDelay = (int)Mathf.Lerp(_aecmRenderDelay, bufferPos - playbackPos, 0.5f);
-                    }
+                    var writeLen = FMODHelper.ClearPCM16(_player, playerPos, minOutputBuffer * 4);
+                    _writePosition = Tools.Repeat(_writePosition + writeLen, playerLen);
                 }
             }
         }
 
-        protected override int Write(ReadOnlySpan<short> data)
+        // -------------------------------- output ------------------------------- //
+
+        public override void SetOutputVolume(int volume)
         {
-            if (!outputEnabled) return 0;
-            var writeLen = FMODHelper.WritePCM16(_playbackSound, _writePosition, data);
-            _writePosition = (_writePosition + writeLen) % _playbackBufferSize;
-            return writeLen;
-        }
-
-        protected override int Read(Span<short> dest)
-        {
-            if (!inputEnabled || !_recordingSound.hasHandle()) return 0;
-            RuntimeManager.CoreSystem.getRecordPosition(_deviceIndex, out var pos);
-            var position = (int)pos;
-            if (position == _readPosition) return 0;
-            if (position < _readPosition) position += _recordingBufferSize;
-            var readLen = dest.Length;
-            if (position - _readPosition < readLen) return 0;
-            readLen = FMODHelper.ReadPCM16(_recordingSound, _readPosition, dest);
-
-            _aecmCaptureDelay = (int)Mathf.Lerp(_aecmCaptureDelay, position - _readPosition, 0.5f);
-            var playbackPaused = true;
-            if (_playbackChannel.hasHandle()) _playbackChannel.getPaused(out playbackPaused);
-            if (!playbackPaused)
-            {
-                var renderDelayMs = _aecmRenderDelay * 1000 / (inputSampleRate * inputChannels);
-                var captureDelayMs = _aecmCaptureDelay * 1000 / (outputSampleRate * outputChannels);
-                unsafe
-                {
-                    fixed (short* nearInput = dest)
-                        AECMWrapper.AECM_Process(_aecmInst, nearInput, null, readLen, inputSampleRate,
-                            renderDelayMs + captureDelayMs);
-                }
-            }
-
-            _readPosition = (_readPosition + readLen) % _recordingBufferSize;
-            return readLen;
+            base.SetOutputVolume(volume);
+            _playerChannel.setVolume(volume / 100f);
         }
 
         public override void EnableOutput(bool enable)
         {
             if (outputEnabled == enable) return;
-            if (enable)
-            {
-                if (!_playbackChannel.hasHandle())
-                {
-                    var exInfo = new CREATESOUNDEXINFO
-                    {
-                        cbsize = Marshal.SizeOf<CREATESOUNDEXINFO>(),
-                        numchannels = outputChannels,
-                        format = SOUND_FORMAT.PCM16,
-                        defaultfrequency = outputSampleRate,
-                        length = (uint)(_playbackBufferSize << 1)
-                    };
-
-                    RuntimeManager.CoreSystem.createSound(exInfo.userdata, MODE.OPENUSER | MODE.LOOP_NORMAL, ref exInfo,
-                        out _playbackSound);
-                    RuntimeManager.CoreSystem.playSound(_playbackSound, default, true, out _playbackChannel);
-                    _playbackChannel.setVolume(outputVolume / 100f);
-                }
-                else
-                {
-                    SetPlaybackPause(true);
-                }
-
-                _playbackChannel.setPosition(0, TIMEUNIT.PCMBYTES);
-                _writePosition = 0;
-                _aecmFramePos = 0;
-            }
-            else
-            {
-                SetPlaybackPause(true);
-            }
-
+            _playerChannel.getPaused(out var current);
+            if (current != !outputEnabled) _playerChannel.setPaused(!outputEnabled);
             base.EnableOutput(enable);
         }
+
+        public override void ResetOutput()
+        {
+            _playerResetFlag = true;
+        }
+
+        protected override int Write(ReadOnlySpan<short> data)
+        {
+            if (!outputEnabled) return 0;
+            if (_playerResetFlag)
+            {
+                _playerResetFlag = false;
+                _playerChannel.getPosition(out var pos, TIMEUNIT.PCM);
+                _writePosition = (int)pos;
+            }
+
+            var writeLen = FMODHelper.WritePCM16(_player, _writePosition, data);
+            _player.getLength(out var length, TIMEUNIT.PCM);
+            _writePosition = Tools.Repeat(_writePosition + writeLen, (int)length);
+            return writeLen;
+        }
+
+        private void InitPlayer()
+        {
+            outputChannels = 1;
+            var exInfo = new CREATESOUNDEXINFO
+            {
+                cbsize = Marshal.SizeOf<CREATESOUNDEXINFO>(),
+                numchannels = outputChannels,
+                format = SOUND_FORMAT.PCM16,
+                defaultfrequency = outputSampleRate,
+                length = (uint)(outputChannels * outputSampleRate * PlayerBufferSec << 1)
+            };
+
+            RuntimeManager.CoreSystem.createSound(exInfo.userdata, MODE.OPENUSER | MODE.LOOP_NORMAL, ref exInfo,
+                out _player);
+            RuntimeManager.CoreSystem.playSound(_player, default, false, out _playerChannel);
+            _playerChannel.setVolume(outputVolume / 100f);
+        }
+
+        private void ClearPlayer()
+        {
+            if (_playerChannel.hasHandle())
+            {
+                _playerChannel.stop();
+                _playerChannel.clearHandle();
+            }
+
+            if (_player.hasHandle())
+            {
+                _player.release();
+                _player.clearHandle();
+            }
+        }
+
+        // -------------------------------- input ------------------------------- //
 
         public override void EnableInput(bool enable)
         {
             if (inputEnabled == enable) return;
-            if (enable) StartRecording(_deviceIndex);
-            else StopRecording(_deviceIndex);
+            if (enable) StartRecorder();
+            else StopRecorder();
             base.EnableInput(enable);
         }
 
-        private void SetPlaybackPause(bool pause)
+        public override void ResetInput()
         {
-            if (!_playbackChannel.hasHandle()) return;
-            _playbackChannel.getPaused(out var current);
-            if (current != pause) _playbackChannel.setPaused(pause);
+            RuntimeManager.CoreSystem.getRecordPosition(_deviceIndex, out var recorderPos);
+            _aecmRecorderPos = (int)recorderPos;
+            _playerChannel.getPosition(out var playerPos, TIMEUNIT.PCM);
+            _aecmPlayerPos = (int)playerPos;
+            _aecmAnchorTime = DateTime.Now;
         }
 
-        private void StartRecording(int id)
+        protected override int Read(Span<short> dest)
         {
-            if (!_recordingSound.hasHandle())
+            if (!inputEnabled || !_recorder.hasHandle()) return 0;
+            RuntimeManager.CoreSystem.getRecordPosition(_deviceIndex, out var pos);
+            var position = (int)pos;
+            if (position == _readPosition) return 0;
+            _recorder.getLength(out var length, TIMEUNIT.PCM);
+            var recorderLen = (int)length;
+            if (position < _readPosition) position += recorderLen;
+            var readLen = dest.Length;
+            if (position - _readPosition < readLen) return 0;
+            readLen = FMODHelper.ReadPCM16(_recorder, _readPosition, dest);
+
+            if (outputEnabled)
             {
-                var exInfo = new CREATESOUNDEXINFO
+                var durationMs = (int)(DateTime.Now - _aecmAnchorTime).TotalMilliseconds;
+                var recorderPassedSamples = Tools.Repeat(_readPosition - _aecmRecorderPos, recorderLen) +
+                                            durationMs / (RecorderBufferSec * 1000) * recorderLen;
+                var playerPassedSamples = recorderPassedSamples * outputSampleRate / inputSampleRate;
+                _player.getLength(out length, TIMEUNIT.PCM);
+                var playerLen = (int)length;
+                var playerPos = Tools.Repeat(_aecmPlayerPos + playerPassedSamples, playerLen);
+                var sampleLen = readLen * outputSampleRate / inputSampleRate;
+                Tools.EnsureMemory(ref _shortBuffer, sampleLen);
+                var sampleBuffer = _shortBuffer.Span[..sampleLen];
+                FMODHelper.ReadPCM16(_player, playerPos, sampleBuffer);
+                _aecmResampler.Process(sampleBuffer, out var resampledBuffer);
+                unsafe
                 {
-                    cbsize = Marshal.SizeOf<CREATESOUNDEXINFO>(),
-                    numchannels = inputChannels,
-                    format = SOUND_FORMAT.PCM16,
-                    defaultfrequency = inputSampleRate,
-                    length = (uint)(_recordingBufferSize << 1)
-                };
-                RuntimeManager.CoreSystem.createSound(exInfo.userdata, MODE.OPENUSER | MODE.LOOP_NORMAL, ref exInfo,
-                    out _recordingSound);
+                    fixed (short* farInput = resampledBuffer)
+                        AECMWrapper.AECM_BufferFarend(_aecmInst, farInput, resampledBuffer.Length, inputSampleRate);
+                    fixed (short* nearInput = dest)
+                        AECMWrapper.AECM_Process(_aecmInst, nearInput, null, readLen, inputSampleRate, 0);
+                }
             }
 
-            RuntimeManager.CoreSystem.isRecording(id, out var isRecording);
-            if (isRecording) RuntimeManager.CoreSystem.recordStop(id);
-            RuntimeManager.CoreSystem.recordStart(id, _recordingSound, true);
-            _readPosition = 0;
+            _readPosition = (_readPosition + readLen) % recorderLen;
+            return readLen;
         }
 
-        private void StopRecording(int id)
+        public override InputDevice[] GetInputDevices()
         {
-            if (_recordingSound.hasHandle())
+            var inputDevices = new List<InputDevice>();
+            RuntimeManager.CoreSystem.getRecordNumDrivers(out var numDrivers, out _);
+            for (var i = 0; i < numDrivers; i++)
             {
-                RuntimeManager.CoreSystem.isRecording(id, out var isRecording);
-                if (isRecording) RuntimeManager.CoreSystem.recordStop(id);
+                RuntimeManager.CoreSystem.getRecordDriverInfo(i, out var deviceName, 64, out _, out var systemRate,
+                    out var speakerMode, out var speakerModeChannels, out var state);
+                if (state.HasFlag(DRIVER_STATE.CONNECTED))
+                    inputDevices.Add(new InputDevice
+                    {
+                        Id = i, Name = deviceName, SystemRate = systemRate,
+                        SpeakerMode = Enum.GetName(typeof(SPEAKERMODE), speakerMode),
+                        SpeakerModeChannels = speakerModeChannels
+                    });
+            }
+
+            return inputDevices.ToArray();
+        }
+
+        public override void SetInputDeviceIndex(int index)
+        {
+            var inputDevices = GetInputDevices();
+            if (inputDevices.Length == 0)
+            {
+                Debug.LogError("没有可用的录音设备");
+                return;
+            }
+
+            StopRecorder();
+            ClearRecorder();
+            index = Tools.Repeat(index, inputDevices.Length);
+            base.SetInputDeviceIndex(index);
+            RuntimeManager.CoreSystem.getRecordDriverInfo(_deviceIndex, out var deviceName, 64, out _, out _, out _,
+                out _,
+                out var state);
+            if (!state.HasFlag(DRIVER_STATE.CONNECTED))
+            {
+                Debug.LogError($"录音设备不可用: {deviceName}");
+                return;
+            }
+
+            InitRecorder();
+            if (inputEnabled) StartRecorder();
+        }
+
+        private void InitRecorder()
+        {
+            inputChannels = 1;
+            var exInfo = new CREATESOUNDEXINFO
+            {
+                cbsize = Marshal.SizeOf<CREATESOUNDEXINFO>(),
+                numchannels = inputChannels,
+                format = SOUND_FORMAT.PCM16,
+                defaultfrequency = inputSampleRate,
+                length = (uint)(inputChannels * inputSampleRate * RecorderBufferSec << 1)
+            };
+            RuntimeManager.CoreSystem.createSound(exInfo.userdata, MODE.OPENUSER | MODE.LOOP_NORMAL, ref exInfo,
+                out _recorder);
+        }
+
+        private void ClearRecorder()
+        {
+            if (_recorder.hasHandle())
+            {
+                _recorder.release();
+                _recorder.clearHandle();
             }
         }
 
-        public override void SwitchInputDevice()
+        private void StartRecorder()
         {
-            RuntimeManager.CoreSystem.getRecordNumDrivers(out _, out var numConnected);
-            var nextDeviceIndex = (_deviceIndex + 1) % numConnected;
-            if (_deviceIndex != nextDeviceIndex)
+            if (!_recorder.hasHandle()) return;
+            RuntimeManager.CoreSystem.isRecording(_deviceIndex, out var isRecording);
+            if (!isRecording)
             {
-                StopRecording(_deviceIndex);
-                _deviceIndex = nextDeviceIndex;
-                if (inputEnabled) StartRecording(_deviceIndex);
-                var deviceName = GetDeviceName();
-                if (!string.IsNullOrEmpty(deviceName))
-                    Debug.Log($"切换录音设备：{deviceName}");
+                RuntimeManager.CoreSystem.recordStart(_deviceIndex, _recorder, true);
+                _readPosition = 0;
+                ResetInput();
             }
         }
 
-        private string GetDeviceName()
+        private void StopRecorder()
         {
-            RuntimeManager.CoreSystem.getRecordNumDrivers(out _, out var numConnected);
-            if (numConnected == 0)
-            {
-                Debug.LogError("没有找到录音设备");
-                return string.Empty;
-            }
-
-            RuntimeManager.CoreSystem.getDriverInfo(_deviceIndex, out var deviceName, 64, out _, out _, out _, out _);
-            return deviceName;
+            if (!_recorder.hasHandle()) return;
+            RuntimeManager.CoreSystem.isRecording(_deviceIndex, out var isRecording);
+            if (isRecording) RuntimeManager.CoreSystem.recordStop(_deviceIndex);
         }
     }
 }

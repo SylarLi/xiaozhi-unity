@@ -40,5 +40,20 @@ namespace XiaoZhi.Unity
             sound.unlock(ptr1, ptr2, len1, len2);
             return (int)(len1 + len2) >> 1;
         }
+
+        public static int ClearPCM16(Sound sound, int position, int length)
+        {
+            position <<= 1;
+            var writeLen = (uint)length << 1;
+            sound.@lock((uint)position, writeLen, out var ptr1, out var ptr2, out var len1, out var len2);
+            unsafe
+            {
+                new Span<byte>(ptr1.ToPointer(), (int)len1).Clear();
+                if (len2 > 0) new Span<byte>(ptr2.ToPointer(), (int)len2).Clear();
+            }
+
+            sound.unlock(ptr1, ptr2, len1, len2);
+            return (int)(len1 + len2) >> 1;
+        }
     }
 }

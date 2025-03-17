@@ -50,9 +50,6 @@ namespace XiaoZhi.Unity
 
         [JsonProperty("USE_WAKE_WORD_DETECT")] public bool UseWakeWordDetect { get; set; }
 
-        [JsonProperty("AUDIO_INPUT_RESAMPLE_RATE")]
-        public int AudioInputResampleRate { get; set; }
-
         [JsonProperty("OTA_VERSION_URL")] public string OtaVersionUrl { get; set; }
     }
 }

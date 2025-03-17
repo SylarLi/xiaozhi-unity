@@ -1,30 +1,65 @@
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
 namespace XiaoZhi.Unity
 {
-    public class UIDisplay : Display
+    public class UIDisplay : IDisplay
     {
-        public override void SetStatus(string status)
+        private static readonly Dictionary<string, string> Emojis = new()
         {
+            { "happy", "1f601" },
+            { "sad", "2639" },
+            { "neutral", "263a" },
+        };
+        
+        private TMP_Text _textStatus;
+
+        private TMP_Text _textChat;
+
+        private TMP_Text _textEmotion;
+
+        private Button _btnSet;
+        
+        private Button _btnChat;
+        
+        public UIDisplay()
+        {
+            var goMain = GameObject.Find("UICamera/Canvas/Main");
+            var trMain = (RectTransform)goMain.transform;
+            _textStatus = trMain.Find("Status").GetComponent<TMP_Text>();
+            _textChat = trMain.Find("Chat").GetComponent<TMP_Text>();
+            _textEmotion = trMain.Find("Emotion").GetComponent<TMP_Text>();
+            _btnSet = trMain.Find("BtnSet").GetComponent<Button>();
+            _btnSet.onClick.AddListener(() =>
+            {
+                // Todo...
+            });
+            _btnChat = trMain.Find("BtnChat").GetComponent<Button>();
+            _btnChat.onClick.AddListener(() =>
+            {
+                App.Instance.ToggleChatState().Forget();
+            });
             
+            SetStatus("");
+            SetChatMessage("system", "");
+            SetEmotion("neutral");
+        }
+        
+        public void SetStatus(string status)
+        {
+            _textStatus.text = status;
         }
 
-        public override void ShowNotification(string notification, int durationMs = 3000)
+        public void SetEmotion(string emotion)
         {
-
+            _textEmotion.text = $"<sprite name=\"{Emojis[emotion]}\">";
         }
 
-        public override void SetEmotion(string emotion)
+        public void SetChatMessage(string role, string content)
         {
-
-        }
-
-        public override void SetChatMessage(string role, string content)
-        {
-
-        }
-
-        public override void SetIcon(string icon)
-        {
-
+            _textChat.text = content;
         }
     }
 }
