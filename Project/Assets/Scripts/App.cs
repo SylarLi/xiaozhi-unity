@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
@@ -38,6 +39,7 @@ namespace XiaoZhi.Unity
         private OpusResampler _inputResampler;
         private OpusResampler _outputResampler;
         private OTA _ota;
+        private CancellationTokenSource _loopCts;
 
         public async void Start()
         {
@@ -52,20 +54,19 @@ namespace XiaoZhi.Unity
             await CheckNewVersion();
             if (Config.Instance.UseAudioProcessing) ConfigureAudioProcessing();
             SetDeviceState(DeviceState.Idle);
-            MainLoop().Forget();
+            _loopCts = new CancellationTokenSource();
+            UniTask.Void(MainLoop, _loopCts.Token);
         }
 
-        private async UniTaskVoid MainLoop()
+        private async UniTaskVoid MainLoop(CancellationToken token)
         {
             var codec = Context.Instance.AudioCodec;
-            while (true)
+            while (!token.IsCancellationRequested)
             {
-                await UniTask.Yield(PlayerLoopTiming.Update);
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+                InputAudio();
                 switch (_deviceState)
                 {
-                    case DeviceState.Listening:
-                        InputAudio();
-                        break;
                     case DeviceState.Idle:
                         var duration = (DateTime.Now - _lastOutputTime).TotalSeconds;
                         const int maxSilenceSeconds = 10;
@@ -120,7 +121,7 @@ namespace XiaoZhi.Unity
                     display.SetEmotion("neutral");
                     ResetDecoder();
                     _opusEncoder.ResetState();
-                    codec.EnableInput(true);
+                    // codec.EnableInput(true);
                     if (Config.Instance.UseAudioProcessing) _audioProcessor.Start();
                     break;
 
@@ -128,7 +129,7 @@ namespace XiaoZhi.Unity
                     display.SetStatus("正在说话");
                     ResetDecoder();
                     codec.EnableOutput(true);
-                    codec.EnableInput(false);
+                    // codec.EnableInput(false);
                     if (Config.Instance.UseAudioProcessing) _audioProcessor.Stop();
                     break;
                 case DeviceState.Starting:
@@ -252,8 +253,13 @@ namespace XiaoZhi.Unity
             }
             else
             {
-                if (_deviceState == DeviceState.Listening)
-                    _opusEncoder.Encode(data, opus => { _protocol.SendAudio(opus).Forget(); });
+                if (_deviceState is DeviceState.Listening)
+                {
+                    _opusEncoder.Encode(data, opus =>
+                    {
+                        _protocol.SendAudio(opus).Forget();
+                    });
+                }
             }
         }
 

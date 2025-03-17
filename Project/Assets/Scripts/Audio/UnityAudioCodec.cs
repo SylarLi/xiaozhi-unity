@@ -141,10 +141,9 @@ namespace XiaoZhi.Unity
             var position = Microphone.GetPosition(deviceName);
             if (position < 0 || position == _recordingPosition) return 0;
             if (position < _recordingPosition) position += _recordingClip.samples;
-            var readMax = position - _recordingPosition;
-            var readLen = Mathf.Min(dest.Length, readMax);
-            _recordingPosition = ReadClip(_recordingClip, _recordingPosition, dest[..readLen]);
-            dest[readLen..].Clear();
+            var readLen = dest.Length;
+            if (position - _recordingPosition < readLen) return 0;
+            _recordingPosition = ReadClip(_recordingClip, _recordingPosition, dest);
             // if (_audioSource && readLen >= _kSampleRate)
             // {
             //     var scale = readLen / _kSampleRate;
@@ -207,7 +206,7 @@ namespace XiaoZhi.Unity
             base.EnableInput(enable);
         }
 
-        public void SwitchInputDevice()
+        public override void SwitchInputDevice()
         {
             _deviceIndex = (_deviceIndex + 1) % Microphone.devices.Length;
             var deviceName = GetDeviceName();

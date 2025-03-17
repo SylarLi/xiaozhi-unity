@@ -53,13 +53,23 @@ namespace XiaoZhi.Unity
         {
             _settings = new Settings("audio");
             outputVolume = _settings.GetInt("output_volume", outputVolume);
+            EnableInput(true);
         }
 
         public abstract void Dispose();
 
+        public abstract void SwitchInputDevice();
+
         public void OutputData(ReadOnlySpan<short> data)
         {
-            Write(data);
+            try
+            {
+                Write(data);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         public bool InputData(out ReadOnlySpan<short> data)
@@ -68,7 +78,16 @@ namespace XiaoZhi.Unity
             var frameSize = inputSampleRate / 1000 * duration * inputChannels;
             Tools.EnsureMemory(ref _frameBuffer, frameSize);
             var span = _frameBuffer[..frameSize].Span;
-            var len = Read(span);
+            var len = 0;
+            try
+            {
+                len = Read(span);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+
             _frameBuffer[len..frameSize].Span.Clear();
             data = span;
             return len > 0;

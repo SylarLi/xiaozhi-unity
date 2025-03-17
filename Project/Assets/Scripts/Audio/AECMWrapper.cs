@@ -43,12 +43,12 @@ namespace XiaoZhi.Audio
             RoutineMode echoMode = RoutineMode.Speakerphone);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe int AECM_BufferFarend(IntPtr aecmInst, short* farInput, int inSampleCount,
+        public static extern unsafe int AECM_BufferFarend(IntPtr aecmInst, short* farInput, long inSampleCount,
             int inSampleRate);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe int AECM_Process(IntPtr aecmInst, short* nearInput, short* cleanInput,
-            long inSampleCount, int inSampleRate, int msInSndCardBuf = 100);
+            long inSampleCount, int inSampleRate, int msInSndCardBuf);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void AECM_Free(IntPtr aecmInst);
