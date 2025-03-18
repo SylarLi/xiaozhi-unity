@@ -29,6 +29,7 @@ namespace XiaoZhi.Unity
 
         public static int Repeat(int value, int length)
         {
+            if (length == 0) return value;
             value %= length;
             if (value < 0) value += length;
             return value;

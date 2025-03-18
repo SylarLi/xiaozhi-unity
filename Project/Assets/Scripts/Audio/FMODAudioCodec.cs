@@ -5,8 +5,6 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using FMOD;
 using FMODUnity;
-using UnityEngine;
-using XiaoZhi.Audio;
 using Channel = FMOD.Channel;
 using Debug = UnityEngine.Debug;
 
@@ -15,7 +13,7 @@ namespace XiaoZhi.Unity
     public class FMODAudioCodec : AudioCodec
     {
         private const int RecorderBufferSec = 8;
-        private const int PlayerBufferSec = 2;
+        private const int PlayerBufferSec = 8;
 
         private CancellationTokenSource _updateCts;
 
@@ -25,27 +23,26 @@ namespace XiaoZhi.Unity
         private Sound _player;
         private Channel _playerChannel;
         private int _writePosition;
-        private bool _playerResetFlag;
+        private bool _playerStartFlag;
+        private bool _playerFinishFlag;
+        private DateTime _playerFinishTime;
         private Memory<short> _shortBuffer;
         private int _deviceIndex;
 
-        private readonly IntPtr _aecmInst;
-        private readonly OpusResampler _aecmResampler;
-        private int _aecmPlayerPos;
-        private int _aecmRecorderPos;
-        private DateTime _aecmAnchorTime;
+        // private readonly IntPtr _aecmInst;
+        // private readonly OpusResampler _aecmResampler;
 
         public FMODAudioCodec(int inputSampleRate, int outputSampleRate)
         {
             this.inputSampleRate = inputSampleRate;
             this.outputSampleRate = outputSampleRate;
 
-            var aecmFrameSize = Math.Min(inputSampleRate / 100, 160);
-            _aecmInst = AECMWrapper.AECM_Create();
-            AECMWrapper.AECM_Init(_aecmInst, aecmFrameSize * 100);
-            AECMWrapper.AECM_SetConfig(_aecmInst);
-            _aecmResampler = new OpusResampler();
-            _aecmResampler.Configure(outputSampleRate, inputSampleRate);
+            // var aecmFrameSize = Math.Min(inputSampleRate / 100, 160);
+            // _aecmInst = AECMWrapper.AECM_Create();
+            // AECMWrapper.AECM_Init(_aecmInst, aecmFrameSize * 100);
+            // AECMWrapper.AECM_SetConfig(_aecmInst);
+            // _aecmResampler = new OpusResampler();
+            // _aecmResampler.Configure(outputSampleRate, inputSampleRate);
 
             _updateCts = new CancellationTokenSource();
             UniTask.Void(Update, _updateCts.Token);
@@ -71,18 +68,10 @@ namespace XiaoZhi.Unity
             while (!token.IsCancellationRequested)
             {
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
-                if (!outputEnabled) continue;
-                _playerChannel.getPosition(out var pos, TIMEUNIT.PCM);
-                var playerPos = (int)pos;
-                _player.getLength(out var length, TIMEUNIT.PCM);
-                var playerLen = (int)length;
-                var playbackEnd = _writePosition;
-                if (playerPos - playbackEnd > playerLen / 2) playbackEnd += playerLen;
-                var minOutputBuffer = Mathf.CeilToInt(outputSampleRate * outputChannels * Time.deltaTime);
-                if (playbackEnd - playerPos < minOutputBuffer)
+                if (outputEnabled && _playerFinishFlag && DateTime.Now >= _playerFinishTime)
                 {
-                    var writeLen = FMODHelper.ClearPCM16(_player, playerPos, minOutputBuffer * 4);
-                    _writePosition = Tools.Repeat(_writePosition + writeLen, playerLen);
+                    _playerFinishFlag = false;
+                    _playerChannel.setMute(true);
                 }
             }
         }
@@ -98,23 +87,39 @@ namespace XiaoZhi.Unity
         public override void EnableOutput(bool enable)
         {
             if (outputEnabled == enable) return;
+            base.EnableOutput(enable);
             _playerChannel.getPaused(out var current);
             if (current != !outputEnabled) _playerChannel.setPaused(!outputEnabled);
-            base.EnableOutput(enable);
         }
 
-        public override void ResetOutput()
+        public override void StartOutput()
         {
-            _playerResetFlag = true;
+            if (!outputEnabled) return;
+            _playerStartFlag = true;
+        }
+
+        public override void FinishOutput()
+        {
+            if (!outputEnabled) return;
+            _playerFinishFlag = true;
+            _playerChannel.getPosition(out var pos, TIMEUNIT.PCM);
+            var playerPos = (int)pos;
+            _player.getLength(out var length, TIMEUNIT.PCM);
+            var playerLen = (int)length;
+            var sampleDist = Tools.Repeat(_writePosition - playerPos, playerLen);
+            var durationMs = sampleDist * 1000 / (outputSampleRate * outputChannels);
+            _playerFinishTime = DateTime.Now + TimeSpan.FromMilliseconds(durationMs + 10);
+            FMODHelper.ClearPCM16(_player, _writePosition, outputSampleRate * outputChannels / 1000 * 200);
         }
 
         protected override int Write(ReadOnlySpan<short> data)
         {
             if (!outputEnabled) return 0;
-            if (_playerResetFlag)
+            if (_playerStartFlag)
             {
-                _playerResetFlag = false;
+                _playerStartFlag = false;
                 _playerChannel.getPosition(out var pos, TIMEUNIT.PCM);
+                _playerChannel.setMute(false);
                 _writePosition = (int)pos;
             }
 
@@ -138,8 +143,9 @@ namespace XiaoZhi.Unity
 
             RuntimeManager.CoreSystem.createSound(exInfo.userdata, MODE.OPENUSER | MODE.LOOP_NORMAL, ref exInfo,
                 out _player);
-            RuntimeManager.CoreSystem.playSound(_player, default, false, out _playerChannel);
+            RuntimeManager.CoreSystem.playSound(_player, default, true, out _playerChannel);
             _playerChannel.setVolume(outputVolume / 100f);
+            _playerChannel.setMute(true);
         }
 
         private void ClearPlayer()
@@ -169,11 +175,9 @@ namespace XiaoZhi.Unity
 
         public override void ResetInput()
         {
+            if (!inputEnabled) return;
             RuntimeManager.CoreSystem.getRecordPosition(_deviceIndex, out var recorderPos);
-            _aecmRecorderPos = (int)recorderPos;
-            _playerChannel.getPosition(out var playerPos, TIMEUNIT.PCM);
-            _aecmPlayerPos = (int)playerPos;
-            _aecmAnchorTime = DateTime.Now;
+            _readPosition = (int)recorderPos;
         }
 
         protected override int Read(Span<short> dest)
@@ -188,30 +192,6 @@ namespace XiaoZhi.Unity
             var readLen = dest.Length;
             if (position - _readPosition < readLen) return 0;
             readLen = FMODHelper.ReadPCM16(_recorder, _readPosition, dest);
-
-            if (outputEnabled)
-            {
-                var durationMs = (int)(DateTime.Now - _aecmAnchorTime).TotalMilliseconds;
-                var recorderPassedSamples = Tools.Repeat(_readPosition - _aecmRecorderPos, recorderLen) +
-                                            durationMs / (RecorderBufferSec * 1000) * recorderLen;
-                var playerPassedSamples = recorderPassedSamples * outputSampleRate / inputSampleRate;
-                _player.getLength(out length, TIMEUNIT.PCM);
-                var playerLen = (int)length;
-                var playerPos = Tools.Repeat(_aecmPlayerPos + playerPassedSamples, playerLen);
-                var sampleLen = readLen * outputSampleRate / inputSampleRate;
-                Tools.EnsureMemory(ref _shortBuffer, sampleLen);
-                var sampleBuffer = _shortBuffer.Span[..sampleLen];
-                FMODHelper.ReadPCM16(_player, playerPos, sampleBuffer);
-                _aecmResampler.Process(sampleBuffer, out var resampledBuffer);
-                unsafe
-                {
-                    fixed (short* farInput = resampledBuffer)
-                        AECMWrapper.AECM_BufferFarend(_aecmInst, farInput, resampledBuffer.Length, inputSampleRate);
-                    fixed (short* nearInput = dest)
-                        AECMWrapper.AECM_Process(_aecmInst, nearInput, null, readLen, inputSampleRate, 0);
-                }
-            }
-
             _readPosition = (_readPosition + readLen) % recorderLen;
             return readLen;
         }

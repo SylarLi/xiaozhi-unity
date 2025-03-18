@@ -8,8 +8,8 @@ namespace XiaoZhi.Unity
         public static int WritePCM16(Sound sound, int position, ReadOnlySpan<short> data)
         {
             position <<= 1;
-            var writeLen = (uint)data.Length << 1;
-            sound.@lock((uint)position, writeLen, out var ptr1, out var ptr2, out var len1, out var len2);
+            var writeLen = data.Length << 1;
+            sound.@lock((uint)position, (uint)writeLen, out var ptr1, out var ptr2, out var len1, out var len2);
             unsafe
             {
                 fixed (short* ptr = data)
@@ -44,8 +44,8 @@ namespace XiaoZhi.Unity
         public static int ClearPCM16(Sound sound, int position, int length)
         {
             position <<= 1;
-            var writeLen = (uint)length << 1;
-            sound.@lock((uint)position, writeLen, out var ptr1, out var ptr2, out var len1, out var len2);
+            var writeLen = length << 1;
+            sound.@lock((uint)position, (uint)writeLen, out var ptr1, out var ptr2, out var len1, out var len2);
             unsafe
             {
                 new Span<byte>(ptr1.ToPointer(), (int)len1).Clear();

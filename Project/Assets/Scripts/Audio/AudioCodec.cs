@@ -1,7 +1,4 @@
 using System;
-using System.Buffers;
-using System.Runtime.CompilerServices;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace XiaoZhi.Unity
@@ -70,7 +67,9 @@ namespace XiaoZhi.Unity
             outputEnabled = enable;
         }
         
-        public abstract void ResetOutput();
+        public abstract void StartOutput();
+        
+        public abstract void FinishOutput();
         
         public void OutputData(ReadOnlySpan<short> data)
         {

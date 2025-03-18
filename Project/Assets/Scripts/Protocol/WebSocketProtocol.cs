@@ -92,7 +92,6 @@ namespace XiaoZhi.Unity
                     var result = await _webSocket.ReceiveAsync(
                         _buffer,
                         _cancellationTokenSource.Token);
-
                     switch (result.MessageType)
                     {
                         case WebSocketMessageType.Close:
@@ -112,7 +111,7 @@ namespace XiaoZhi.Unity
             }
             catch (Exception ex)
             {
-                if (_webSocket.State == WebSocketState.Open)
+                if (_webSocket?.State == WebSocketState.Open)
                 {
                     SetError($"接收消息错误: {ex.Message}");
                 }
@@ -185,7 +184,7 @@ namespace XiaoZhi.Unity
         public override async UniTask SendAudio(ReadOnlyMemory<byte> audioData)
         {
             if (!_isConnected || !_isAudioChannelOpen || _webSocket.State != WebSocketState.Open)
-                throw new InvalidOperationException("Audio channel is not open");
+                return;
             await _webSocket.SendAsync(
                 audioData,
                 WebSocketMessageType.Binary,
@@ -200,6 +199,13 @@ namespace XiaoZhi.Unity
 
         private async UniTask CloseWebSocket()
         {
+            if (_cancellationTokenSource != null)
+            {
+                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource.Dispose();
+                _cancellationTokenSource = null;
+            }
+
             if (_webSocket != null)
             {
                 if (_webSocket.State == WebSocketState.Open)
@@ -219,13 +225,6 @@ namespace XiaoZhi.Unity
 
                 _webSocket.Dispose();
                 _webSocket = null;
-            }
-
-            if (_cancellationTokenSource != null)
-            {
-                _cancellationTokenSource.Cancel();
-                _cancellationTokenSource.Dispose();
-                _cancellationTokenSource = null;
             }
 
             _isAudioChannelOpen = false;

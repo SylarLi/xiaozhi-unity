@@ -9,9 +9,10 @@ namespace XiaoZhi.Unity
     {
         private static readonly Dictionary<string, string> Emojis = new()
         {
-            { "happy", "1f601" },
-            { "sad", "2639" },
-            { "neutral", "263a" },
+            { "happy", "😄" },
+            { "sad", "🙁" },
+            { "neutral", "🙂" },
+            { "thinking", "🤔" }
         };
         
         private TMP_Text _textStatus;
@@ -23,6 +24,8 @@ namespace XiaoZhi.Unity
         private Button _btnSet;
         
         private Button _btnChat;
+        
+        private Button _btnTest;
         
         public UIDisplay()
         {
@@ -54,7 +57,7 @@ namespace XiaoZhi.Unity
 
         public void SetEmotion(string emotion)
         {
-            _textEmotion.text = $"<sprite name=\"{Emojis[emotion]}\">";
+            _textEmotion.text = Emojis[emotion];
         }
 
         public void SetChatMessage(string role, string content)

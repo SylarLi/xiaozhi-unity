@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace XiaoZhi.Unity
 {
@@ -39,7 +40,7 @@ namespace XiaoZhi.Unity
         private OTA _ota;
         private CancellationTokenSource _loopCts;
 
-        public async void Start()
+        public async UniTaskVoid Start()
         {
             Application.runInBackground = true;
             var display = Context.Instance.Display;
@@ -106,7 +107,6 @@ namespace XiaoZhi.Unity
                 case DeviceState.Speaking:
                     display.SetStatus("正在说话");
                     _opusDecoder.ResetState();
-                    codec.ResetOutput();
                     break;
                 case DeviceState.Starting:
                 case DeviceState.WifiConfiguring:
@@ -117,7 +117,7 @@ namespace XiaoZhi.Unity
                     break;
             }
         }
-
+        
         private void Alert(string status, string message, string emotion = null)
         {
             var display = Context.Instance.Display;
@@ -163,6 +163,7 @@ namespace XiaoZhi.Unity
                     break;
                 case DeviceState.Listening:
                     await _protocol.CloseAudioChannel();
+                    SetDeviceState(DeviceState.Idle);
                     break;
             }
         }
@@ -213,7 +214,7 @@ namespace XiaoZhi.Unity
 
         // public void Reboot();
         // public void WakeWordInvoke(string wakeWord);
-
+        
         private void InputAudio()
         {
             var codec = Context.Instance.AudioCodec;
@@ -225,7 +226,10 @@ namespace XiaoZhi.Unity
                 _wakeWordDetect.IsDetectionRunning) _wakeWordDetect.Feed(data);
             if (_deviceState is DeviceState.Listening)
             {
-                _opusEncoder.Encode(data, opus => { _protocol.SendAudio(opus).Forget(); });
+                _opusEncoder.Encode(data, opus =>
+                {
+                    _protocol.SendAudio(opus).Forget();
+                });
             }
         }
 
@@ -356,7 +360,11 @@ namespace XiaoZhi.Unity
                             {
                                 _aborted = false;
                                 if (_deviceState is DeviceState.Idle or DeviceState.Listening)
+                                {
                                     SetDeviceState(DeviceState.Speaking);
+                                    Context.Instance.AudioCodec.StartOutput();
+                                }
+
                                 break;
                             }
                             case "stop":
@@ -373,6 +381,8 @@ namespace XiaoZhi.Unity
                                     {
                                         SetDeviceState(DeviceState.Idle);
                                     }
+
+                                    Context.Instance.AudioCodec.FinishOutput();
                                 });
                                 break;
                             }
@@ -413,8 +423,8 @@ namespace XiaoZhi.Unity
             _ota.SetHeader("Accept-Language", Lang.Code.Value);
             _ota.SetHeader("User-Agent", $"{boardName}/{Context.Instance.GetVersion()}");
             _ota.SetPostData(Config.BuildOTAPostData(macAddr, boardName));
-            const int MAX_RETRY = 10;
-            for (var i = 0; i < MAX_RETRY; i++)
+            const int maxRetry = 10;
+            for (var i = 0; i < maxRetry; i++)
             {
                 if (await _ota.CheckVersionAsync())
                 {
