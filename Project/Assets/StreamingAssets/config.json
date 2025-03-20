@@ -1,11 +1,10 @@
 {
     "CUSTOM_MAC_ADDRESS": "",
+    "OTA_VERSION_URL": "https://api.tenclass.net/xiaozhi/ota/",
     "WEBSOCKET_URL": "wss://api.tenclass.net/xiaozhi/v1/",
     "WEBSOCKET_ACCESS_TOKEN": "test-token",
     "OPUS_FRAME_DURATION_MS": 60,
-    "USE_AUDIO_PROCESSING": false,
     "USE_WAKE_WORD_DETECT": false,
     "AUDIO_INPUT_SAMPLE_RATE": 16000,
-    "AUDIO_OUTPUT_SAMPLE_RATE": 24000,
-    "OTA_VERSION_URL": "https://api.tenclass.net/xiaozhi/ota/"
+    "AUDIO_OUTPUT_SAMPLE_RATE": 24000
 }

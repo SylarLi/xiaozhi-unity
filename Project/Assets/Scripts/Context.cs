@@ -10,6 +10,8 @@ namespace XiaoZhi.Unity
         public static Context Instance { get; } = new();
 
         public string Uuid { get; private set; }
+        
+        public App App { get; private set; }
 
         public IDisplay Display { get; }
 
@@ -21,10 +23,9 @@ namespace XiaoZhi.Unity
         {
             Uuid = Guid.NewGuid().ToString("d");
             Display = new UIDisplay();
-            Debug.Assert(Config.Instance.AudioInputSampleRate is 8000 or 16000, "音频输入采样率必须是 8000 或 16000");
-            Debug.Assert(Config.Instance.AudioOutputSampleRate is 8000 or 16000 or 24000, "音频输出采样率必须是 8000、16000 或 24000");
             AudioCodec = new FMODAudioCodec(Config.Instance.AudioInputSampleRate,
                 Config.Instance.AudioOutputSampleRate);
+            App = new App();
         }
 
         public string GetMacAddress()

@@ -24,12 +24,6 @@ namespace XiaoZhi.Unity
         protected int outputSampleRate = 0;
         public int OutputSampleRate => outputSampleRate;
 
-        protected int inputChannels = 1;
-        public int InputChannels => inputChannels;
-
-        protected int outputChannels = 1;
-        public int OutputChannels => outputChannels;
-
         protected int outputVolume = 70;
 
         public int OutputVolume => outputVolume;
@@ -55,6 +49,8 @@ namespace XiaoZhi.Unity
         
         // --------------------------- output ---------------------------- //
         
+        public abstract bool GetOutputSpectrum(out ReadOnlySpan<float> spectrum);
+        
         public virtual void SetOutputVolume(int volume)
         {
             outputVolume = volume;
@@ -67,9 +63,7 @@ namespace XiaoZhi.Unity
             outputEnabled = enable;
         }
         
-        public abstract void StartOutput();
-        
-        public abstract void FinishOutput();
+        public abstract void ResetOutput();
         
         public void OutputData(ReadOnlySpan<short> data)
         {
@@ -87,6 +81,8 @@ namespace XiaoZhi.Unity
         
         // --------------------------- input ---------------------------- //
 
+        public abstract bool GetInputSpectrum(out ReadOnlySpan<float> spectrum);
+        
         public abstract InputDevice[] GetInputDevices();
         
         public virtual void SetInputDeviceIndex(int index)
@@ -104,7 +100,7 @@ namespace XiaoZhi.Unity
         public bool InputData(out ReadOnlySpan<short> data)
         {
             const int duration = 30;
-            var frameSize = inputSampleRate / 1000 * duration * inputChannels;
+            var frameSize = inputSampleRate / 1000 * duration;
             Tools.EnsureMemory(ref _frameBuffer, frameSize);
             var span = _frameBuffer[..frameSize].Span;
             var len = 0;
@@ -123,6 +119,5 @@ namespace XiaoZhi.Unity
         }
 
         protected abstract int Read(Span<short> dest);
-        
     }
 }

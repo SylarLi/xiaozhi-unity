@@ -54,8 +54,9 @@ namespace XiaoZhi.Unity
 
         public bool TryReadAt(int position, Span<T> destination)
         {
-            if (_count == 0 || destination.Length == 0 || position < 0 || position >= _capacity || _count < destination.Length)
+            if (destination.Length == 0 || destination.Length > _capacity)
                 return false;
+            position = Tools.Repeat(position, _capacity);
             var readCount = destination.Length;
             var firstRead = Math.Min(readCount, _capacity - position);
             _buffer.Span.Slice(position, firstRead).CopyTo(destination);

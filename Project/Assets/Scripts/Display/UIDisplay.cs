@@ -42,7 +42,7 @@ namespace XiaoZhi.Unity
             _btnChat = trMain.Find("BtnChat").GetComponent<Button>();
             _btnChat.onClick.AddListener(() =>
             {
-                App.Instance.ToggleChatState().Forget();
+                Context.Instance.App.ToggleChatState().Forget();
             });
             
             SetStatus("");

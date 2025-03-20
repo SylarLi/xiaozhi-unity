@@ -307,7 +307,7 @@ namespace FMOD
         public int     numchannels;
         
         [MarshalAs(UnmanagedType.ByValArray,SizeConst=32)]
-        private IntPtr[] spectrum_internal;
+        public IntPtr[] spectrum_internal;
 
         public float[][] spectrum
         {

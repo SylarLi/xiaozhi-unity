@@ -5,13 +5,15 @@ using System.Collections.Generic;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Cysharp.Threading.Tasks;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEngine.Networking;
 
 namespace XiaoZhi.Unity
 {
     public class OTA
     {
-        private HttpClient _httpClient;
         private string _checkVersionUrl;
         private readonly Dictionary<string, string> _headers = new();
         private string _postData;
@@ -47,23 +49,25 @@ namespace XiaoZhi.Unity
                 return false;
             }
 
-            _httpClient = new HttpClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, _checkVersionUrl);
-            request.Content = new StringContent(_postData, Encoding.UTF8, "application/json");
+            var webRequest = new UnityWebRequest();
             foreach (var header in _headers)
-                request.Headers.TryAddWithoutValidation(header.Key, header.Value);
-            var response = await _httpClient.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
+                webRequest.SetRequestHeader(header.Key, header.Value);
+            webRequest.method = "POST";
+            webRequest.url = _checkVersionUrl;
+            webRequest.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(_postData));
+            webRequest.uploadHandler.contentType = "application/json";
+            webRequest.downloadHandler = new DownloadHandlerBuffer();
+            await webRequest.SendWebRequest();
+            if (webRequest.result != UnityWebRequest.Result.Success)
             {
-                var error = await response.Content.ReadAsStringAsync();
-                Debug.LogError($"HTTP Error: {response.StatusCode}, {error}");
-                _httpClient.Dispose();
+                Debug.LogError($"UnityWebRequest Error: {webRequest.error}");
+                webRequest.Dispose();
                 return false;
             }
             
-            var jsonResponse = await response.Content.ReadAsStringAsync();
+            var jsonResponse = webRequest.downloadHandler.text;
+            webRequest.Dispose();
             Debug.Log("ota response: " + jsonResponse);
-            _httpClient.Dispose();
             var root = JObject.Parse(jsonResponse);
             if (!root.TryGetValue("firmware", out var firmware) ||
                 firmware["version"] == null)

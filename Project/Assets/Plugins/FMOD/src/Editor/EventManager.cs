@@ -128,6 +128,11 @@ namespace FMODUnity
 
             // Get all banks and set cache time to most recent write time
             List<string> bankFileNames = new List<string>(Directory.GetFiles(defaultBankFolder, "*.bank", SearchOption.AllDirectories));
+            if (bankFileNames.Count == 0)
+            {
+                return null;
+            }
+            
             DateTime lastWriteTime = bankFileNames.Max(fileName => File.GetLastWriteTime(fileName));
 
             // Exit early if cache is up to date

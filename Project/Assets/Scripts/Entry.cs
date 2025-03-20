@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using XiaoZhi.Unity;
 
@@ -6,6 +5,6 @@ public class Entry : MonoBehaviour
 {
     private void Start()
     {
-        App.Instance.Start().Forget();
+        Context.Instance.App.Start().Forget();
     }
 }

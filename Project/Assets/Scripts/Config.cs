@@ -39,9 +39,7 @@ namespace XiaoZhi.Unity
 
         [JsonProperty("OPUS_FRAME_DURATION_MS")]
         public int OpusFrameDurationMs { get; set; }
-
-        [JsonProperty("USE_AUDIO_PROCESSING")] public bool UseAudioProcessing { get; set; }
-
+        
         [JsonProperty("AUDIO_INPUT_SAMPLE_RATE")]
         public int AudioInputSampleRate { get; set; }
 
