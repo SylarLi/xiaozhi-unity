@@ -80,7 +80,6 @@ namespace XiaoZhi.Unity
             Debug.Log("设备状态改变: " + _deviceState);
             var context = Context.Instance;
             var display = context.Display;
-            var codec = context.AudioCodec;
             switch (state)
             {
                 case DeviceState.Unknown:
@@ -99,13 +98,11 @@ namespace XiaoZhi.Unity
                     display.SetEmotion("neutral");
                     _opusDecoder.ResetState();
                     _opusEncoder.ResetState();
-                    codec.ResetInput();
                     break;
 
                 case DeviceState.Speaking:
                     display.SetStatus("正在说话");
                     _opusDecoder.ResetState();
-                    codec.ResetOutput();
                     break;
                 case DeviceState.Starting:
                 case DeviceState.WifiConfiguring:
@@ -268,7 +265,7 @@ namespace XiaoZhi.Unity
         // Todo
         private void ConfigureAudioProcessing()
         {
-            _wakeWordDetect.Initialize(1);
+            _wakeWordDetect.Initialize(Context.Instance.AudioCodec.InputChannels);
             _wakeWordDetect.OnVadStateChanged += speaking =>
             {
                 if (_deviceState != DeviceState.Listening) return;

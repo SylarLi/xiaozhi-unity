@@ -48,12 +48,7 @@ namespace XiaoZhi.Unity
         {
             if (_decoder == IntPtr.Zero) return;
             OpusWrapper.opus_decoder_destroy(_decoder);
-            _decoder = IntPtr.Zero;
-        }
-
-        ~OpusDecoder()
-        {
-            Dispose();
+            _decoder = IntPtr.Zero; 
         }
     }
 }

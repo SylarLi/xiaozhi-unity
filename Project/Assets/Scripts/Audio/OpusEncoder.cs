@@ -84,10 +84,5 @@ namespace XiaoZhi.Unity
             OpusWrapper.opus_encoder_destroy(_encoder);
             _encoder = IntPtr.Zero;
         }
-
-        ~OpusEncoder()
-        {
-            Dispose();
-        }
     }
 }

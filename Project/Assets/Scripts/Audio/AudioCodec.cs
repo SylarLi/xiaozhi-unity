@@ -17,6 +17,12 @@ namespace XiaoZhi.Unity
         protected bool inputEnabled;
 
         protected bool outputEnabled;
+        
+        protected int inputChannels = 1;
+        public int InputChannels => inputChannels;
+
+        protected int outputChannels = 1;
+        public int OutputChannels => outputChannels;
 
         protected int inputSampleRate = 0;
         public int InputSampleRate => inputSampleRate;
@@ -63,8 +69,6 @@ namespace XiaoZhi.Unity
             outputEnabled = enable;
         }
         
-        public abstract void ResetOutput();
-        
         public void OutputData(ReadOnlySpan<short> data)
         {
             try
@@ -94,13 +98,11 @@ namespace XiaoZhi.Unity
         {
             inputEnabled = enable;
         }
-
-        public abstract void ResetInput();
         
         public bool InputData(out ReadOnlySpan<short> data)
         {
             const int duration = 30;
-            var frameSize = inputSampleRate / 1000 * duration;
+            var frameSize = inputSampleRate / 1000 * duration * inputChannels;
             Tools.EnsureMemory(ref _frameBuffer, frameSize);
             var span = _frameBuffer[..frameSize].Span;
             var len = 0;

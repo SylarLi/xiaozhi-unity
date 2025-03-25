@@ -6,7 +6,6 @@ using Cysharp.Threading.Tasks;
 using FMOD;
 using FMODUnity;
 using UnityEngine;
-using XiaoZhi.Audio;
 using Channel = FMOD.Channel;
 using Debug = UnityEngine.Debug;
 
@@ -18,44 +17,40 @@ namespace XiaoZhi.Unity
         private const int RecorderBufferSec = 2;
         private const int PlayerBufferSec = 8;
         private const int FFTWindowSize = 512;
-        
+
         private CancellationTokenSource _updateCts;
         private FMOD.System _system;
         private Sound _recorder;
         private Channel _recorderChannel;
+        private int _recorderLength;
         private int _readPosition;
         private Sound _player;
         private Channel _playerChannel;
+        private int _playerLength;
         private int _writePosition;
         private float _playEndTime;
         private int _deviceIndex;
-        private Memory<short> _shortBuffer;
+        private Memory<short> _shortBuffer1;
+        private Memory<short> _shortBuffer2;
         private DSP _fftDsp;
         private Memory<float> _floatBuffer;
         private readonly RingBuffer<short> _inputBuffer;
         private readonly SpectrumAnalyzer _spectrumAnalyzer;
         private int _lastAnalysisPos;
 
-        private readonly IntPtr _aecmInst;
-        private readonly OpusResampler _aecmResampler;
-        private readonly int _aecmLatency;
+        private FMODAudioProcessor _aps;
         private int _apsCapturePos;
-        private int _apsReversePos;
 
-        public FMODAudioCodec(int inputSampleRate, int outputSampleRate)
+        public FMODAudioCodec(int inputSampleRate, int inputChannels, int outputSampleRate, int outputChannels)
         {
             this.inputSampleRate = inputSampleRate;
             this.outputSampleRate = outputSampleRate;
-            _inputBuffer = new RingBuffer<short>(inputSampleRate * InputBufferSec);
+            this.inputChannels = inputChannels;
+            this.outputChannels = outputChannels;
+            _system = RuntimeManager.CoreSystem;
+            _inputBuffer = new RingBuffer<short>(inputSampleRate * inputChannels * InputBufferSec);
             _spectrumAnalyzer = new SpectrumAnalyzer(FFTWindowSize << 1);
-            _system = RuntimeManager.CoreSystem; 
-            _system.getDSPBufferSize(out var bufferSize, out var numBuffers);
-            _aecmLatency = (int)((numBuffers - 1.5) * bufferSize * 1000 / outputSampleRate);
-            _aecmInst = AECMWrapper.AECM_Create();
-            AECMWrapper.AECM_Init(_aecmInst, Math.Min(inputSampleRate / 100, 160) * 100);
-            AECMWrapper.AECM_SetConfig(_aecmInst);
-            _aecmResampler = new OpusResampler();
-            _aecmResampler.Configure(outputSampleRate, inputSampleRate);
+            InitAudioProcessor();
             InitPlayer();
             _updateCts = new CancellationTokenSource();
             UniTask.Void(Update, _updateCts.Token);
@@ -70,8 +65,23 @@ namespace XiaoZhi.Unity
                 _updateCts = null;
             }
 
+            ClearAudioProcessor();
             ClearPlayer();
             ClearRecorder();
+        }
+
+        private void InitAudioProcessor()
+        {
+            _aps = new FMODAudioProcessor(inputSampleRate, inputChannels, outputSampleRate, outputChannels);
+        }
+
+        private void ClearAudioProcessor()
+        {
+            if (_aps != null)
+            {
+                _aps.Dispose();
+                _aps = null;
+            }
         }
 
         private async UniTaskVoid Update(CancellationToken token)
@@ -93,8 +103,7 @@ namespace XiaoZhi.Unity
             var nowTime = Time.time;
             if (nowTime >= _playEndTime)
             {
-                _player.getLength(out var length, TIMEUNIT.PCM);
-                FMODHelper.ClearPCM16(_player, 0, (int)length);
+                FMODHelper.ClearPCM16(_player, 0, _playerLength);
                 _playerChannel.setMute(true);
             }
             else if (_playEndTime - nowTime < Time.deltaTime)
@@ -105,50 +114,47 @@ namespace XiaoZhi.Unity
 
         private void ProcessAudio()
         {
-            var inputFrameSize = Math.Min(inputSampleRate / 100, 160);
-            var outputFrameSize = inputFrameSize * outputSampleRate / inputSampleRate;
-            _playerChannel.getPosition(out var pos, TIMEUNIT.PCM);
-            var playerPos = (int)pos;
-            _player.getLength(out var length, TIMEUNIT.PCM);
-            var playerLength = (int)length;
-            var numReverseFrames = Tools.Repeat(playerPos - _apsReversePos, playerLength) / outputFrameSize;
-            _system.getRecordPosition(_deviceIndex, out pos);
+            _system.isRecording(_deviceIndex, out var isRecording);
+            if (!isRecording) return;
+            var inputFrameSize = inputSampleRate / 100 * inputChannels;
+            _system.getRecordPosition(_deviceIndex, out var pos);
             var recorderPos = (int)pos;
-            _recorder.getLength(out length, TIMEUNIT.PCM);
-            var recorderLength = (int)length;
-            var numCaptureFrames = Tools.Repeat(recorderPos - _apsCapturePos, recorderLength) / inputFrameSize;
-            var numFrames = Math.Min(numReverseFrames, numCaptureFrames);
+            var numFrames = Tools.Repeat(recorderPos - _apsCapturePos, _recorderLength) / inputFrameSize;
             if (numFrames <= 0) return;
+            var outputFrameSize = outputSampleRate / 100 * outputChannels;
+            _playerChannel.getPosition(out pos, TIMEUNIT.PCM);
+            var playerPos = (int)pos;
+            var apsReversePos = Tools.Repeat((playerPos / outputFrameSize - numFrames) * outputFrameSize, _playerLength);
             var reverseSamples = numFrames * outputFrameSize;
-            Tools.EnsureMemory(ref _shortBuffer, reverseSamples);
-            var reverseSpan = _shortBuffer.Span[..reverseSamples];
-            FMODHelper.ReadPCM16(_player, _apsReversePos, reverseSpan);
-            _aecmResampler.Process(reverseSpan, out var resampledReverseSpan);
+            Tools.EnsureMemory(ref _shortBuffer1, reverseSamples);
+            var reverseSpan = _shortBuffer1.Span[..reverseSamples];
+            FMODHelper.ReadPCM16(_player, apsReversePos, reverseSpan);
             var captureSamples = numFrames * inputFrameSize;
-            Tools.EnsureMemory(ref _shortBuffer, captureSamples);
-            var captureSpan = _shortBuffer.Span[..captureSamples];
+            Tools.EnsureMemory(ref _shortBuffer2, captureSamples);
+            var captureSpan = _shortBuffer2.Span[..captureSamples];
             FMODHelper.ReadPCM16(_recorder, _apsCapturePos, captureSpan);
-            unsafe
+            for (var i = 0; i < numFrames; i++)
             {
-                fixed (short* reversePtr = resampledReverseSpan)
-                fixed (short* capturePtr = captureSpan)
+                var span1 = reverseSpan.Slice(i * outputFrameSize, outputFrameSize);
+                var result1 = _aps.ProcessReverseStream(span1, span1);
+                if (result1 != 0)
                 {
-                    var iReversePtr = reversePtr;
-                    var iCapturePtr = capturePtr;
-                    for (var i = 0; i < numFrames; i++)
-                    {
-                        AECMWrapper.AECM_BufferFarend(_aecmInst, iReversePtr, inputFrameSize);
-                        AECMWrapper.AECM_Process(_aecmInst, iCapturePtr, null, iCapturePtr, inputFrameSize,
-                            _aecmLatency);
-                        iReversePtr += inputFrameSize;
-                        iCapturePtr += inputFrameSize;
-                    }
+                    Debug.LogError($"ProcessReverseStream error: {result1}");
+                    return;
+                }
+                
+                _aps.SetStreamDelayMs(0);
+                var span2 = captureSpan.Slice(i * inputFrameSize, inputFrameSize);
+                var result2 = _aps.ProcessStream(span2, span2);
+                if (result2 != 0)
+                {
+                    Debug.LogError($"ProcessStream error: {result2}");
+                    return;
                 }
             }
 
             _inputBuffer.TryWrite(captureSpan);
-            _apsReversePos = Tools.Repeat(_apsReversePos + numFrames * outputFrameSize, playerLength);
-            _apsCapturePos = Tools.Repeat(_apsCapturePos + numFrames * inputFrameSize, recorderLength);
+            _apsCapturePos = Tools.Repeat(_apsCapturePos + numFrames * inputFrameSize, _recorderLength);
         }
 
         // -------------------------------- output ------------------------------- //
@@ -190,10 +196,6 @@ namespace XiaoZhi.Unity
             if (current != !outputEnabled) _playerChannel.setPaused(!outputEnabled);
         }
 
-        public override void ResetOutput()
-        {
-        }
-
         protected override int Write(ReadOnlySpan<short> data)
         {
             if (!outputEnabled) return 0;
@@ -217,13 +219,14 @@ namespace XiaoZhi.Unity
 
         private void InitPlayer()
         {
+            _playerLength = outputSampleRate * outputChannels * PlayerBufferSec;
             var exInfo = new CREATESOUNDEXINFO
             {
                 cbsize = Marshal.SizeOf<CREATESOUNDEXINFO>(),
                 numchannels = 1,
                 format = SOUND_FORMAT.PCM16,
                 defaultfrequency = outputSampleRate,
-                length = (uint)(outputSampleRate * PlayerBufferSec << 1)
+                length = (uint)(_playerLength << 1)
             };
 
             var system = _system;
@@ -242,6 +245,8 @@ namespace XiaoZhi.Unity
         {
             if (_fftDsp.hasHandle())
             {
+                if (_playerChannel.hasHandle())
+                    _playerChannel.removeDSP(_fftDsp);
                 _fftDsp.release();
                 _fftDsp.clearHandle();
             }
@@ -269,8 +274,8 @@ namespace XiaoZhi.Unity
             var position = (_inputBuffer.WritePosition / readLen - 1) * readLen;
             if (_lastAnalysisPos == position) return false;
             _lastAnalysisPos = position;
-            Tools.EnsureMemory(ref _shortBuffer, readLen);
-            var shortSpan = _shortBuffer.Span[..readLen];
+            Tools.EnsureMemory(ref _shortBuffer1, readLen);
+            var shortSpan = _shortBuffer1.Span[..readLen];
             return _inputBuffer.TryReadAt(position, shortSpan) &&
                    _spectrumAnalyzer.Analyze(shortSpan, out spectrum);
         }
@@ -281,12 +286,6 @@ namespace XiaoZhi.Unity
             if (enable) StartRecorder();
             else StopRecorder();
             base.EnableInput(enable);
-        }
-
-        public override void ResetInput()
-        {
-            if (!inputEnabled) return;
-            _inputBuffer.Clear();
         }
 
         protected override int Read(Span<short> dest)
@@ -342,13 +341,14 @@ namespace XiaoZhi.Unity
 
         private void InitRecorder()
         {
+            _recorderLength = inputSampleRate * inputChannels * RecorderBufferSec;
             var exInfo = new CREATESOUNDEXINFO
             {
                 cbsize = Marshal.SizeOf<CREATESOUNDEXINFO>(),
                 numchannels = 1,
                 format = SOUND_FORMAT.PCM16,
                 defaultfrequency = inputSampleRate,
-                length = (uint)(inputSampleRate * RecorderBufferSec << 1)
+                length = (uint)(_recorderLength << 1)
             };
             _system.createSound(exInfo.userdata, MODE.OPENUSER | MODE.LOOP_NORMAL, ref exInfo,
                 out _recorder);
@@ -373,11 +373,7 @@ namespace XiaoZhi.Unity
         {
             if (!_recorder.hasHandle()) return;
             _system.isRecording(_deviceIndex, out var isRecording);
-            if (!isRecording)
-            {
-                _system.recordStart(_deviceIndex, _recorder, true);
-                ResetInput();
-            }
+            if (!isRecording) _system.recordStart(_deviceIndex, _recorder, true);
         }
 
         private void StopRecorder()

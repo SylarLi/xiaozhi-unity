@@ -66,10 +66,5 @@ namespace XiaoZhi.Unity
                 _resamplerState = IntPtr.Zero;
             }
         }
-
-        ~OpusResampler()
-        {
-            Dispose();
-        }
     }
 }

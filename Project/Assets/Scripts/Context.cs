@@ -10,8 +10,8 @@ namespace XiaoZhi.Unity
         public static Context Instance { get; } = new();
 
         public string Uuid { get; private set; }
-        
-        public App App { get; private set; }
+
+        public App App { get; }
 
         public IDisplay Display { get; }
 
@@ -23,9 +23,15 @@ namespace XiaoZhi.Unity
         {
             Uuid = Guid.NewGuid().ToString("d");
             Display = new UIDisplay();
-            AudioCodec = new FMODAudioCodec(Config.Instance.AudioInputSampleRate,
-                Config.Instance.AudioOutputSampleRate);
+            AudioCodec = new FMODAudioCodec(Config.Instance.AudioInputSampleRate, 1,
+                Config.Instance.AudioOutputSampleRate, 1);
             App = new App();
+        }
+
+        public void Dispose()
+        {
+            AudioCodec.Dispose();
+            App.Dispose();
         }
 
         public string GetMacAddress()
