@@ -77,12 +77,23 @@ namespace XiaoZhi.Unity
             if (_encoder == IntPtr.Zero) return;
             OpusWrapper.opus_encoder_ctl(_encoder, OpusWrapper.OPUS_SET_COMPLEXITY_REQUEST, complexity);
         }
-
+        
         public void Dispose()
+        {
+            InternalDispose();
+            GC.SuppressFinalize(this);
+        }
+        
+        private void InternalDispose()
         {
             if (_encoder == IntPtr.Zero) return;
             OpusWrapper.opus_encoder_destroy(_encoder);
             _encoder = IntPtr.Zero;
+        }
+
+        ~OpusEncoder()
+        {
+            InternalDispose();
         }
     }
 }

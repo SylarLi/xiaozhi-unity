@@ -39,17 +39,16 @@ namespace XiaoZhi.Unity
         public bool Process(ReadOnlySpan<short> input, out ReadOnlySpan<short> output)
         {
             var outputSamples = GetOutputSamples(input.Length);
-            Tools.EnsureMemory(ref _outputBuffer, outputSamples);
+            output = Tools.EnsureMemory(ref _outputBuffer, outputSamples);
             int ret;
             unsafe
             {
                 fixed (short* pin = input)
-                fixed (short* pout = _outputBuffer.Span)
+                fixed (short* pout = output)
                     ret = OpusWrapper.silk_resampler(_resamplerState, pout, pin, input.Length);
             }
 
             if (ret != 0) Debug.Log($"Failed to process resampler: {ret}");
-            output = _outputBuffer.Slice(0, outputSamples).Span;
             return ret == 0;
         }
 
@@ -57,14 +56,25 @@ namespace XiaoZhi.Unity
         {
             return inputSamples * _outputSampleRate / _inputSampleRate;
         }
-
+        
         public void Dispose()
+        {
+            InternalDispose();
+            GC.SuppressFinalize(this);
+        }
+        
+        private void InternalDispose()
         {
             if (_resamplerState != IntPtr.Zero)
             {
                 Marshal.FreeHGlobal(_resamplerState);
                 _resamplerState = IntPtr.Zero;
             }
+        }
+
+        ~OpusResampler()
+        {
+            InternalDispose();
         }
     }
 }

@@ -46,9 +46,20 @@ namespace XiaoZhi.Unity
 
         public void Dispose()
         {
+            InternalDispose();
+            GC.SuppressFinalize(this);
+        }
+        
+        private void InternalDispose()
+        {
             if (_decoder == IntPtr.Zero) return;
             OpusWrapper.opus_decoder_destroy(_decoder);
             _decoder = IntPtr.Zero; 
+        }
+
+        ~OpusDecoder()
+        {
+            InternalDispose();
         }
     }
 }

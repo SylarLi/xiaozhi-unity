@@ -22,6 +22,7 @@ namespace XiaoZhi.Unity
         private FMOD.System _system;
         private Sound _recorder;
         private Channel _recorderChannel;
+        private bool _isRecording;
         private int _recorderLength;
         private int _readPosition;
         private Sound _player;
@@ -34,8 +35,8 @@ namespace XiaoZhi.Unity
         private Memory<short> _shortBuffer2;
         private DSP _fftDsp;
         private Memory<float> _floatBuffer;
-        private readonly RingBuffer<short> _inputBuffer;
-        private readonly SpectrumAnalyzer _spectrumAnalyzer;
+        private RingBuffer<short> _inputBuffer;
+        private SpectrumAnalyzer _spectrumAnalyzer;
         private int _lastAnalysisPos;
 
         private FMODAudioProcessor _aps;
@@ -52,6 +53,11 @@ namespace XiaoZhi.Unity
             _spectrumAnalyzer = new SpectrumAnalyzer(FFTWindowSize << 1);
             InitAudioProcessor();
             InitPlayer();
+        }
+
+        public override void Start()
+        {
+            base.Start();
             _updateCts = new CancellationTokenSource();
             UniTask.Void(Update, _updateCts.Token);
         }
@@ -114,8 +120,7 @@ namespace XiaoZhi.Unity
 
         private void ProcessAudio()
         {
-            _system.isRecording(_deviceIndex, out var isRecording);
-            if (!isRecording) return;
+            if (!outputEnabled || !_isRecording) return;
             var inputFrameSize = inputSampleRate / 100 * inputChannels;
             _system.getRecordPosition(_deviceIndex, out var pos);
             var recorderPos = (int)pos;
@@ -126,12 +131,10 @@ namespace XiaoZhi.Unity
             var playerPos = (int)pos;
             var apsReversePos = Tools.Repeat((playerPos / outputFrameSize - numFrames) * outputFrameSize, _playerLength);
             var reverseSamples = numFrames * outputFrameSize;
-            Tools.EnsureMemory(ref _shortBuffer1, reverseSamples);
-            var reverseSpan = _shortBuffer1.Span[..reverseSamples];
+            var reverseSpan = Tools.EnsureMemory(ref _shortBuffer1, reverseSamples);
             FMODHelper.ReadPCM16(_player, apsReversePos, reverseSpan);
             var captureSamples = numFrames * inputFrameSize;
-            Tools.EnsureMemory(ref _shortBuffer2, captureSamples);
-            var captureSpan = _shortBuffer2.Span[..captureSamples];
+            var captureSpan = Tools.EnsureMemory(ref _shortBuffer2, captureSamples);
             FMODHelper.ReadPCM16(_recorder, _apsCapturePos, captureSpan);
             for (var i = 0; i < numFrames; i++)
             {
@@ -175,8 +178,7 @@ namespace XiaoZhi.Unity
                 return false;
             }
 
-            Tools.EnsureMemory(ref _floatBuffer, fftData.length);
-            var floatSpan = _floatBuffer.Span[..fftData.length];
+            var floatSpan = Tools.EnsureMemory(ref _floatBuffer, fftData.length);
             fftData.getSpectrum(0, floatSpan);
             spectrum = floatSpan;
             return true;
@@ -274,8 +276,7 @@ namespace XiaoZhi.Unity
             var position = (_inputBuffer.WritePosition / readLen - 1) * readLen;
             if (_lastAnalysisPos == position) return false;
             _lastAnalysisPos = position;
-            Tools.EnsureMemory(ref _shortBuffer1, readLen);
-            var shortSpan = _shortBuffer1.Span[..readLen];
+            var shortSpan = Tools.EnsureMemory(ref _shortBuffer1, readLen);
             return _inputBuffer.TryReadAt(position, shortSpan) &&
                    _spectrumAnalyzer.Analyze(shortSpan, out spectrum);
         }
@@ -322,7 +323,7 @@ namespace XiaoZhi.Unity
                 Debug.LogError("没有可用的录音设备");
                 return;
             }
-
+            
             index = Tools.Repeat(index, inputDevices.Length);
             _system.getRecordDriverInfo(index, out var deviceName, 64, out _, out _, out _,
                 out _, out var state);
@@ -373,14 +374,22 @@ namespace XiaoZhi.Unity
         {
             if (!_recorder.hasHandle()) return;
             _system.isRecording(_deviceIndex, out var isRecording);
-            if (!isRecording) _system.recordStart(_deviceIndex, _recorder, true);
+            if (!isRecording)
+            {
+                _system.recordStart(_deviceIndex, _recorder, true);
+                _isRecording = true;
+            }
         }
 
         private void StopRecorder()
         {
             if (!_recorder.hasHandle()) return;
             _system.isRecording(_deviceIndex, out var isRecording);
-            if (isRecording) _system.recordStop(_deviceIndex);
+            if (isRecording)
+            {
+                _system.recordStop(_deviceIndex);
+                _isRecording = false;
+            }
         }
     }
 

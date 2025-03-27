@@ -16,6 +16,11 @@ namespace XiaoZhi.Unity
             return $"{_namespace}_{key}";
         }
 
+        public bool HasKey(string key)
+        {
+            return PlayerPrefs.HasKey(GetFullKey(key));
+        }
+
         public string GetString(string key, string defaultValue = "")
         {
             return PlayerPrefs.GetString(GetFullKey(key), defaultValue);

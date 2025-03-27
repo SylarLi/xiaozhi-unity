@@ -4,7 +4,16 @@
     "WEBSOCKET_URL": "wss://api.tenclass.net/xiaozhi/v1/",
     "WEBSOCKET_ACCESS_TOKEN": "test-token",
     "OPUS_FRAME_DURATION_MS": 60,
-    "USE_WAKE_WORD_DETECT": false,
+    "SERVER_INPUT_SAMPLE_RATE": 16000,
+    "USE_WAKE_WORD_DETECT": true,
     "AUDIO_INPUT_SAMPLE_RATE": 16000,
-    "AUDIO_OUTPUT_SAMPLE_RATE": 16000
+    "AUDIO_OUTPUT_SAMPLE_RATE": 24000,
+
+    "KEYWORD_SPOTTER_MODEL_CONFIG_TRANSDUCER_ENCODER": "sherpa-onnx/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01/encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx",
+    "KEYWORD_SPOTTER_MODEL_CONFIG_TRANSDUCER_DECODER": "sherpa-onnx/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01/decoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx",
+    "KEYWORD_SPOTTER_MODEL_CONFIG_TRANSDUCER_JOINER": "sherpa-onnx/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01/joiner-epoch-12-avg-2-chunk-16-left-64.onnx",
+    "KEYWORD_SPOTTER_MODEL_CONFIG_TOKEN": "sherpa-onnx/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01/tokens.txt",
+    "KEYWORD_SPOTTER_MODEL_CONFIG_NUM_THREADS": 1,
+    "KEYWORD_SPOTTER_KEYWORDS_FILE": "sherpa-onnx/keywords.txt",
+    "VAD_MODEL_CONFIG": "sherpa-onnx/silero_vad.onnx"
 }

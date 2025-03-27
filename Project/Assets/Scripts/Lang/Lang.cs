@@ -22,7 +22,7 @@ namespace XiaoZhi.Unity.Lang
         private static void LoadStrings()
         {
             var jsonPath = $"lang/{Code.Value}.json";
-            if (!ResourceLoader.FileExists(ResourceLoader.ResourceType.StreamingAssets, jsonPath))
+            if (!FileUtility.FileExists(FileUtility.FileType.StreamingAssets, jsonPath))
             {
                 Debug.LogError($"Language file not found: {jsonPath}");
                 return;
@@ -30,7 +30,7 @@ namespace XiaoZhi.Unity.Lang
 
             try
             {
-                var jsonText = ResourceLoader.ReadAllText(ResourceLoader.ResourceType.StreamingAssets, jsonPath);
+                var jsonText = FileUtility.ReadAllText(FileUtility.FileType.StreamingAssets, jsonPath);
                 _strings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonText);
             }
             catch (Exception ex)

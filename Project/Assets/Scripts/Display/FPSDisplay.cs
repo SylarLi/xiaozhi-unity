@@ -5,10 +5,10 @@ namespace XiaoZhi.Display
     public class FPSDisplay : MonoBehaviour
     {
         private float updateInterval = 0.5f; // 更新FPS的时间间隔
-        private float accum = 0.0f; // FPS累积
-        private int frames = 0; // 帧数
+        private float accum; // FPS累积
+        private int frames; // 帧数
         private float timeleft; // 剩余时间
-        private float currentFPS = 0.0f; // 当前FPS
+        private float currentFPS; // 当前FPS
         
         private GUIStyle style;
         private Rect rect;

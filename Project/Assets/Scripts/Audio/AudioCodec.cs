@@ -5,6 +5,8 @@ namespace XiaoZhi.Unity
 {
     public abstract class AudioCodec : IDisposable
     {
+        public const int InputFrameSizeMs = 30;
+        
         public struct InputDevice
         {
             public string Name;
@@ -41,8 +43,8 @@ namespace XiaoZhi.Unity
         private Settings _settings;
 
         private Memory<short> _frameBuffer;
-
-        public void Start()
+        
+        public virtual void Start()
         {
             _settings = new Settings("audio");
             outputVolume = _settings.GetInt("output_volume", outputVolume);
@@ -101,10 +103,8 @@ namespace XiaoZhi.Unity
         
         public bool InputData(out ReadOnlySpan<short> data)
         {
-            const int duration = 30;
-            var frameSize = inputSampleRate / 1000 * duration * inputChannels;
-            Tools.EnsureMemory(ref _frameBuffer, frameSize);
-            var span = _frameBuffer[..frameSize].Span;
+            var frameSize = inputSampleRate / 1000 * InputFrameSizeMs * inputChannels;
+            var span = Tools.EnsureMemory(ref _frameBuffer, frameSize);
             var len = 0;
             try
             {

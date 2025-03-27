@@ -40,8 +40,14 @@ public class FMODAudioProcessor : IDisposable
         return WebRTCAPMWrapper.WebRTC_APM_ProcessStream(_handle, ref src.GetPinnableReference(), _inputStream,
             _inputStream, ref dest.GetPinnableReference());
     }
-
+    
     public void Dispose()
+    {
+        InternalDispose();
+        GC.SuppressFinalize(this);
+    }
+        
+    private void InternalDispose()
     {
         if (_handle != IntPtr.Zero)
         {
@@ -60,5 +66,10 @@ public class FMODAudioProcessor : IDisposable
             WebRTCAPMWrapper.WebRTC_APM_DestroyStreamConfig(_outputStream);
             _outputStream = IntPtr.Zero;
         }
+    }
+
+    ~FMODAudioProcessor()
+    {
+        InternalDispose();
     }
 }

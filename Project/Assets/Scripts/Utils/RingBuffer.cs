@@ -9,6 +9,7 @@ namespace XiaoZhi.Unity
         private int _writePosition;
         private int _readPosition;
         private int _count;
+        private readonly object _locker = new();
 
         public int Count => _count;
         public int Capacity => _capacity;
@@ -28,47 +29,60 @@ namespace XiaoZhi.Unity
 
         public bool TryWrite(ReadOnlySpan<T> data)
         {
-            if (data.Length > _capacity - _count)
-                return false;
-            var writeCount = Math.Min(data.Length, _capacity - _writePosition);
-            data.Slice(0, writeCount).CopyTo(_buffer.Span.Slice(_writePosition));
-            if (writeCount < data.Length) data.Slice(writeCount).CopyTo(_buffer.Span.Slice(0));
-            _writePosition = (_writePosition + data.Length) % _capacity;
-            _count += data.Length;
-            return true;
+            lock (_locker)
+            {
+                if (data.Length > _capacity - _count)
+                    return false;
+                var writeCount = Math.Min(data.Length, _capacity - _writePosition);
+                data.Slice(0, writeCount).CopyTo(_buffer.Span.Slice(_writePosition));
+                if (writeCount < data.Length) data.Slice(writeCount).CopyTo(_buffer.Span.Slice(0));
+                _writePosition = (_writePosition + data.Length) % _capacity;
+                _count += data.Length;
+                return true;   
+            }
         }
 
         public bool TryRead(Span<T> destination)
         {
-            if (_count == 0 || destination.Length == 0 || _count < destination.Length)
-                return false;
-            var readCount = destination.Length;
-            var firstRead = Math.Min(readCount, _capacity - _readPosition);
-            _buffer.Span.Slice(_readPosition, firstRead).CopyTo(destination);
-            if (firstRead < readCount)
-                _buffer.Span.Slice(0, readCount - firstRead).CopyTo(destination.Slice(firstRead));
-            _readPosition = (_readPosition + readCount) % _capacity;
-            _count -= readCount;
-            return true;
+            lock (_locker)
+            {
+                if (_count == 0 || destination.Length == 0 || _count < destination.Length)
+                    return false;
+                var readCount = destination.Length;
+                var firstRead = Math.Min(readCount, _capacity - _readPosition);
+                _buffer.Span.Slice(_readPosition, firstRead).CopyTo(destination);
+                if (firstRead < readCount)
+                    _buffer.Span.Slice(0, readCount - firstRead).CopyTo(destination.Slice(firstRead));
+                _readPosition = (_readPosition + readCount) % _capacity;
+                _count -= readCount;
+                return true;
+            }
         }
 
         public bool TryReadAt(int position, Span<T> destination)
         {
-            if (destination.Length == 0 || destination.Length > _capacity)
-                return false;
-            position = Tools.Repeat(position, _capacity);
-            var readCount = destination.Length;
-            var firstRead = Math.Min(readCount, _capacity - position);
-            _buffer.Span.Slice(position, firstRead).CopyTo(destination);
-            if (firstRead < readCount)
-                _buffer.Span.Slice(0, readCount - firstRead).CopyTo(destination.Slice(firstRead));
-            return true;
+            lock (_locker)
+            {
+                if (destination.Length == 0 || destination.Length > _capacity)
+                    return false;
+                position = Tools.Repeat(position, _capacity);
+                var readCount = destination.Length;
+                var firstRead = Math.Min(readCount, _capacity - position);
+                _buffer.Span.Slice(position, firstRead).CopyTo(destination);
+                if (firstRead < readCount)
+                    _buffer.Span.Slice(0, readCount - firstRead).CopyTo(destination.Slice(firstRead));
+                return true;
+            }
         }
+        
         public void Clear()
         {
-            _writePosition = 0;
-            _readPosition = 0;
-            _count = 0;
+            lock (_locker)
+            {
+                _writePosition = 0;
+                _readPosition = 0;
+                _count = 0;
+            }
         }
     }
 }

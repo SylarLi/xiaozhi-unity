@@ -22,35 +22,53 @@ namespace XiaoZhi.Unity
 
     public class App : IDisposable
     {
+        private Context _context;
         private Protocol _protocol;
         private DeviceState _deviceState = DeviceState.Unknown;
         public DeviceState GetDeviceState() => _deviceState;
+        private bool _voiceDetected;
+        public bool VoiceDetected => _voiceDetected;
         private bool _keepListening;
         private bool _aborted;
-        private bool _voiceDetected;
-        public bool IsVoiceDetected() => _voiceDetected;
         private int _opusDecodeSampleRate = -1;
-        private WakeWordDetect _wakeWordDetect;
+        private WakeService _wakeService;
         private OpusEncoder _opusEncoder;
         private OpusDecoder _opusDecoder;
         private OpusResampler _inputResampler;
         private OpusResampler _outputResampler;
         private OTA _ota;
-        private CancellationTokenSource _loopCts;
+        private CancellationTokenSource _cts;
+        private IDisplay _display;
+        private AudioCodec _codec;
+        public AudioCodec GetCodec() => _codec;
+        private Settings _settings;
+
+        public void Init(Context context)
+        {
+            _context = context;
+            _cts = new CancellationTokenSource();
+            _settings = new Settings("app");
+            Application.runInBackground = true;
+        }
 
         public async UniTaskVoid Start()
         {
-            Application.runInBackground = true;
-            var display = Context.Instance.Display;
+            await InitUI();
             SetDeviceState(DeviceState.Starting);
+            _display.SetStatus("正在加载资源");
+            await PrepareResource(_cts.Token);
             InitializeAudio();
-            display.SetStatus("正在加载协议");
+            _display.SetStatus("正在加载协议");
             InitializeProtocol();
             await CheckNewVersion();
-            // ConfigureAudioProcessing();
+            if (Config.Instance.UseWakeWordDetect)
+            {
+                _display.SetStatus("正在加载模型");
+                await InitializeWakeService();
+            }
+
             SetDeviceState(DeviceState.Idle);
-            _loopCts = new CancellationTokenSource();
-            UniTask.Void(MainLoop, _loopCts.Token);
+            UniTask.Void(MainLoop, _cts.Token);
         }
 
         private async UniTaskVoid MainLoop(CancellationToken token)
@@ -64,13 +82,40 @@ namespace XiaoZhi.Unity
 
         public void Dispose()
         {
-            _loopCts?.Cancel();
-            _loopCts?.Dispose();
+            _cts?.Cancel();
+            _cts?.Dispose();
             _protocol?.Dispose();
+            _wakeService?.Dispose();
             _opusDecoder?.Dispose();
             _opusEncoder?.Dispose();
             _inputResampler?.Dispose();
             _outputResampler?.Dispose();
+            _codec?.Dispose();
+        }
+
+        private async UniTask InitUI()
+        {
+            _display = await _context.UIManager.ShowModuleUI<UIDisplay>();
+            _display.RegisterApp(this);
+        }
+
+        private async UniTask PrepareResource(CancellationToken cancellationToken)
+        {
+            if (!IsFirstEnter()) return;
+#if UNITY_ANDROID && !UNITY_EDITOR
+            var streamingAssets = new[]
+            {
+                Config.Instance.KeyWordSpotterModelConfigTransducerEncoder,
+                Config.Instance.KeyWordSpotterModelConfigTransducerDecoder,
+                Config.Instance.KeyWordSpotterModelConfigTransducerJoiner,
+                Config.Instance.KeyWordSpotterModelConfigToken,
+                Config.Instance.KeyWordSpotterKeyWordsFile,
+                Config.Instance.VadModelConfig
+            };
+            await UniTask.WhenAll(streamingAssets.Select(i => ResourceLoader.CopyStreamingAssetsToDataPath(i, cancellationToken)));
+            await UniTask.SwitchToMainThread();
+#endif
+            MarkAsNotFirstEnter();
         }
 
         private void SetDeviceState(DeviceState state)
@@ -78,33 +123,34 @@ namespace XiaoZhi.Unity
             if (_deviceState == state) return;
             _deviceState = state;
             Debug.Log("设备状态改变: " + _deviceState);
-            var context = Context.Instance;
-            var display = context.Display;
             switch (state)
             {
                 case DeviceState.Unknown:
                 case DeviceState.Idle:
-                    display.SetStatus("待机中");
-                    display.SetEmotion("neutral");
+                    _display.SetStatus("待机中");
+                    _display.SetEmotion("neutral");
                     break;
 
                 case DeviceState.Connecting:
-                    display.SetStatus("正在连接");
-                    display.SetChatMessage("system", "");
+                    _display.SetStatus("正在连接");
+                    _display.SetChatMessage("system", "");
                     break;
 
                 case DeviceState.Listening:
-                    display.SetStatus("正在聆听");
-                    display.SetEmotion("neutral");
+                    _display.SetStatus("正在聆听");
+                    _display.SetEmotion("neutral");
                     _opusDecoder.ResetState();
                     _opusEncoder.ResetState();
                     break;
 
                 case DeviceState.Speaking:
-                    display.SetStatus("正在说话");
+                    _display.SetStatus("正在说话");
                     _opusDecoder.ResetState();
                     break;
                 case DeviceState.Starting:
+                    _display.SetStatus("启动中");
+                    _display.SetEmotion("neutral");
+                    break;
                 case DeviceState.WifiConfiguring:
                 case DeviceState.Upgrading:
                 case DeviceState.Activating:
@@ -113,13 +159,12 @@ namespace XiaoZhi.Unity
                     break;
             }
         }
-        
+
         private void Alert(string status, string message, string emotion = null)
         {
-            var display = Context.Instance.Display;
-            display.SetStatus(status);
-            display.SetChatMessage("system", message);
-            display.SetEmotion(emotion);
+            _display.SetStatus(status);
+            _display.SetChatMessage("system", message);
+            _display.SetEmotion(emotion);
             Debug.Log("Alert: " + status + " " + message + " " + emotion);
         }
 
@@ -208,39 +253,29 @@ namespace XiaoZhi.Unity
             }
         }
 
-        // public void Reboot();
-        // public void WakeWordInvoke(string wakeWord);
-        
         private void InputAudio()
         {
-            var codec = Context.Instance.AudioCodec;
-            for (var i = 0; i < 3; i++)
+            var times = Mathf.CeilToInt(Time.deltaTime * 1000 / AudioCodec.InputFrameSizeMs);
+            for (var i = 0; i < times; i++)
             {
-                if (!codec.InputData(out var data))
-                    return;
-                if (codec.InputSampleRate != _inputResampler.OutputSampleRate)
+                if (!_codec.InputData(out var data))
+                    break;
+                if (_codec.InputSampleRate != _inputResampler.OutputSampleRate)
                     _inputResampler.Process(data, out data);
-                if (Config.Instance.UseWakeWordDetect && _deviceState != DeviceState.Listening &&
-                    _wakeWordDetect.IsDetectionRunning) _wakeWordDetect.Feed(data);
                 if (_deviceState is DeviceState.Listening)
-                {
-                    _opusEncoder.Encode(data, opus =>
-                    {
-                        _protocol.SendAudio(opus).Forget();
-                    });
-                }   
+                    _opusEncoder.Encode(data, opus => { _protocol.SendAudio(opus).Forget(); });
+                if (_wakeService is { IsRunning: true })
+                    _wakeService.Feed(data);
             }
         }
 
         private void OutputAudio(ReadOnlySpan<byte> opus)
         {
-            if (_deviceState == DeviceState.Listening)
-                return;
+            if (_deviceState == DeviceState.Listening) return;
             if (_aborted) return;
             if (!_opusDecoder.Decode(opus, out var pcm)) return;
-            var codec = Context.Instance.AudioCodec;
-            if (_opusDecodeSampleRate != codec.OutputSampleRate) _outputResampler.Process(pcm, out pcm);
-            codec.OutputData(pcm);
+            if (_opusDecodeSampleRate != _codec.OutputSampleRate) _outputResampler.Process(pcm, out pcm);
+            _codec.OutputData(pcm);
         }
 
         private void SetDecodeSampleRate(int sampleRate)
@@ -249,11 +284,10 @@ namespace XiaoZhi.Unity
             _opusDecodeSampleRate = sampleRate;
             _opusDecoder.Dispose();
             _opusDecoder = new OpusDecoder(_opusDecodeSampleRate, 1, Config.Instance.OpusFrameDurationMs);
-            var codec = Context.Instance.AudioCodec;
-            if (_opusDecodeSampleRate == codec.OutputSampleRate) return;
-            Debug.Log($"Resampling audio from {_opusDecodeSampleRate} to {codec.OutputSampleRate}");
+            if (_opusDecodeSampleRate == _codec.OutputSampleRate) return;
+            Debug.Log($"Resampling audio from {_opusDecodeSampleRate} to {_codec.OutputSampleRate}");
             _outputResampler ??= new OpusResampler();
-            _outputResampler.Configure(_opusDecodeSampleRate, codec.OutputSampleRate);
+            _outputResampler.Configure(_opusDecodeSampleRate, _codec.OutputSampleRate);
         }
 
         private async UniTask ShowActivationCode()
@@ -262,82 +296,74 @@ namespace XiaoZhi.Unity
             await UniTask.Delay(1000);
         }
 
-        // Todo
-        private void ConfigureAudioProcessing()
+        private async UniTask InitializeWakeService()
         {
-            _wakeWordDetect.Initialize(Context.Instance.AudioCodec.InputChannels);
-            _wakeWordDetect.OnVadStateChanged += speaking =>
+            _wakeService = new SherpaOnnxWakeService();
+            _wakeService.Initialize(Config.Instance.ServerInputSampleRate);
+            _wakeService.OnVadStateChanged += speaking => { _voiceDetected = speaking; };
+            _wakeService.OnWakeWordDetected += wakeWord =>
             {
-                if (_deviceState != DeviceState.Listening) return;
-                _voiceDetected = speaking;
-            };
-            _wakeWordDetect.OnWakeWordDetected += wakeWord =>
-            {
+                Debug.Log($"Wake word detected: {wakeWord}");
                 UniTask.Void(async () =>
                 {
-                    if (_deviceState == DeviceState.Idle)
+                    await UniTask.SwitchToMainThread();
+                    switch (_deviceState)
                     {
-                        SetDeviceState(DeviceState.Connecting);
-                        _wakeWordDetect.EncodeWakeWordData();
-                        if (!await _protocol.OpenAudioChannel())
+                        case DeviceState.Idle:
                         {
-                            Debug.Log("Failed to open audio channel");
-                            SetDeviceState(DeviceState.Idle);
-                            _wakeWordDetect.StartDetection();
-                            return;
+                            SetDeviceState(DeviceState.Connecting);
+                            if (!await _protocol.OpenAudioChannel())
+                            {
+                                Debug.Log("Failed to open audio channel");
+                                SetDeviceState(DeviceState.Idle);
+                                return;
+                            }
+
+                            await _protocol.SendWakeWordDetected(wakeWord);
+                            _keepListening = true;
+                            SetDeviceState(DeviceState.Listening);
+                            break;
                         }
-
-                        while (_wakeWordDetect.GetWakeWordOpus(out var opus))
-                            await _protocol.SendAudio(opus);
-                        await _protocol.SendWakeWordDetected(wakeWord);
-                        Debug.Log($"Wake word detected: {wakeWord}");
-                        _keepListening = true;
-                        SetDeviceState(DeviceState.Listening);
+                        case DeviceState.Speaking:
+                            await AbortSpeaking(AbortReason.WakeWordDetected);
+                            break;
                     }
-                    else if (_deviceState == DeviceState.Speaking)
-                    {
-                        await AbortSpeaking(AbortReason.WakeWordDetected);
-                    }
-                    else if (_deviceState == DeviceState.Activating)
-                    {
-                        SetDeviceState(DeviceState.Idle);
-                    }
-
-                    _wakeWordDetect.StartDetection();
                 });
             };
-            _wakeWordDetect.StartDetection();
+            await UniTask.SwitchToThreadPool();
+            _wakeService.Start();
+            await UniTask.SwitchToMainThread();
         }
 
         private void InitializeAudio()
         {
-            var codec = Context.Instance.AudioCodec;
-            _opusDecodeSampleRate = codec.OutputSampleRate;
+            var inputSampleRate = Config.Instance.AudioInputSampleRate;
+            var outputSampleRate = Config.Instance.AudioOutputSampleRate;
+            _opusDecodeSampleRate = outputSampleRate;
             _opusDecoder = new OpusDecoder(_opusDecodeSampleRate, 1, Config.Instance.OpusFrameDurationMs);
-            var resampleRate = 16000;
+            var resampleRate = Config.Instance.ServerInputSampleRate;
             _opusEncoder = new OpusEncoder(resampleRate, 1, Config.Instance.OpusFrameDurationMs);
             _inputResampler = new OpusResampler();
-            _inputResampler.Configure(codec.InputSampleRate, resampleRate);
-            codec.Start();
+            _inputResampler.Configure(inputSampleRate, resampleRate);
+            _codec = new FMODAudioCodec(inputSampleRate, 1, outputSampleRate, 1);
+            _codec.Start();
         }
 
         private void InitializeProtocol()
         {
-            var display = Context.Instance.Display;
-            var codec = Context.Instance.AudioCodec;
             _protocol = new WebSocketProtocol();
             _protocol.OnNetworkError += (error) => { Alert(Lang.Strings.ERROR, error, "sad"); };
             _protocol.OnIncomingAudio += OutputAudio;
             _protocol.OnChannelOpened += () =>
             {
-                if (_protocol.ServerSampleRate != codec.OutputSampleRate)
+                if (_protocol.ServerSampleRate != _codec.OutputSampleRate)
                     Debug.Log(
-                        $"Server sample rate {_protocol.ServerSampleRate} does not match device output sample rate {codec.OutputSampleRate}, resampling may cause distortion");
+                        $"Server sample rate {_protocol.ServerSampleRate} does not match device output sample rate {_codec.OutputSampleRate}, resampling may cause distortion");
                 SetDecodeSampleRate(_protocol.ServerSampleRate);
             };
             _protocol.OnChannelClosed += () =>
             {
-                display.SetChatMessage("system", "");
+                _display.SetChatMessage("system", "");
                 SetDeviceState(DeviceState.Idle);
             };
             _protocol.OnIncomingJson += message =>
@@ -384,7 +410,7 @@ namespace XiaoZhi.Unity
                             case "sentence_start":
                             {
                                 var text = message["text"].ToString();
-                                if (!string.IsNullOrEmpty(text)) display.SetChatMessage("assistant", text);
+                                if (!string.IsNullOrEmpty(text)) _display.SetChatMessage("assistant", text);
                                 break;
                             }
                         }
@@ -394,13 +420,13 @@ namespace XiaoZhi.Unity
                     case "stt":
                     {
                         var text = message["text"].ToString();
-                        if (!string.IsNullOrEmpty(text)) display.SetChatMessage("user", text);
+                        if (!string.IsNullOrEmpty(text)) _display.SetChatMessage("user", text);
                         break;
                     }
                     case "llm":
                     {
                         var emotion = message["emotion"].ToString();
-                        if (!string.IsNullOrEmpty(emotion)) display.SetEmotion(emotion);
+                        if (!string.IsNullOrEmpty(emotion)) _display.SetEmotion(emotion);
                         break;
                     }
                 }
@@ -410,13 +436,14 @@ namespace XiaoZhi.Unity
 
         private async UniTask CheckNewVersion()
         {
-            var macAddr = Context.Instance.GetMacAddress();
-            var boardName = Context.Instance.GetBoardName();
+            var config = Config.Instance;
+            var macAddr = config.GetMacAddress();
+            var boardName = config.GetBoardName();
             _ota = new OTA();
             _ota.SetCheckVersionUrl(Config.Instance.OtaVersionUrl);
             _ota.SetHeader("Device-Id", macAddr);
             _ota.SetHeader("Accept-Language", Lang.Code.Value);
-            _ota.SetHeader("User-Agent", $"{boardName}/{Context.Instance.GetVersion()}");
+            _ota.SetHeader("User-Agent", $"{boardName}/{config.GetVersion()}");
             _ota.SetPostData(Config.BuildOTAPostData(macAddr, boardName));
             const int maxRetry = 10;
             for (var i = 0; i < maxRetry; i++)
@@ -443,6 +470,17 @@ namespace XiaoZhi.Unity
 
                 await UniTask.Delay(1000);
             }
+        }
+
+        private bool IsFirstEnter()
+        {
+            return !_settings.HasKey("i_am_xiaozhi");
+        }
+
+        private void MarkAsNotFirstEnter()
+        {
+            _settings.SetInt("i_am_xiaozhi", 1);
+            _settings.Save();
         }
     }
 }

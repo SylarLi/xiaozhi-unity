@@ -31,12 +31,18 @@ namespace XiaoZhi.Unity
             _ = CloseWebSocket();
         }
 
+        public void Configure()
+        {
+            
+        }
+
         public override async UniTask<bool> OpenAudioChannel()
         {
-            var url = Config.Instance.WebSocketUrl;
-            var token = Config.Instance.WebSocketAccessToken;
-            var deviceId = Context.Instance.GetMacAddress();
-            var clientId = Context.Instance.Uuid;
+            var config = Config.Instance;
+            var url = config.WebSocketUrl;
+            var token = config.WebSocketAccessToken;
+            var deviceId = config.GetMacAddress();
+            var clientId = config.GetUUid();
             Debug.Log($"url: {url}");
             Debug.Log($"token: {token}");
             Debug.Log($"deviceId: {deviceId}");
@@ -74,7 +80,7 @@ namespace XiaoZhi.Unity
                     format = "opus",
                     sample_rate = 16000,
                     channels = 1,
-                    frame_duration = Config.Instance.OpusFrameDurationMs
+                    frame_duration = config.OpusFrameDurationMs
                 }
             };
             await SendJson(helloMessage);
