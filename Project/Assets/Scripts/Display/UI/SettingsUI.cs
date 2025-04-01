@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace XiaoZhi.Unity
 {
-    public class UIDisplay : BaseUI, IDisplay
+    public class MainUI : BaseUI, IDisplay
     {
         private static readonly Dictionary<string, string> Emojis = new()
         {
@@ -25,7 +25,7 @@ namespace XiaoZhi.Unity
         private Button _btnSet;
         private Button _btnChat;
         private Button _btnTest;
-        private UIInputWave _uiInputWave;
+        private XInputWave _xInputWave;
         private CancellationTokenSource _loopCts;
 
         public void RegisterApp(App app)
@@ -35,7 +35,7 @@ namespace XiaoZhi.Unity
         
         public override string GetResourcePath()
         {
-            return "MainUI";
+            return "MainUI/MainUI";
         }
 
         protected override void OnInit()
@@ -48,12 +48,7 @@ namespace XiaoZhi.Unity
             {
                 // Todo...
             });
-            _btnChat = Tr.Find("BtnChat").GetComponent<Button>();
-            _btnChat.onClick.AddListener(() =>
-            {
-                _app.ToggleChatState().Forget();
-            });
-            _uiInputWave = Tr.Find("Spectrum").GetComponent<UIInputWave>();
+            _xInputWave = Tr.Find("Spectrum").GetComponent<XInputWave>();
         }
 
         protected override async UniTask OnShow(BaseUIData data = null)
@@ -96,9 +91,9 @@ namespace XiaoZhi.Unity
             {
                 await UniTask.Delay(SpectrumUpdateInterval, DelayType.Realtime, PlayerLoopTiming.Update, token);
                 await UniTask.SwitchToThreadPool();
-                var dirty = _uiInputWave.UpdateSpectrumData(_app.GetCodec());
+                var dirty = _xInputWave.UpdateSpectrumData(_app.GetCodec());
                 await UniTask.SwitchToMainThread();
-                if (dirty) _uiInputWave.SetVerticesDirty();
+                if (dirty) _xInputWave.SetVerticesDirty();
             }
         }
     }

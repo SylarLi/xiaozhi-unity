@@ -1,0 +1,18 @@
+{
+    "ACTIVATION": "激活设备",
+    "ERROR": "错误",
+    "LOADING_RESOURCES": "加载资源...",
+    "LOADING_PROTOCOL": "加载协议...",
+    "LOADING_MODEL": "加载模型...",
+    "STATE_STARTING": "启动中...",
+    "STATE_STANDBY": "待机中...",
+    "STATE_CONNECTING": "连接中...",
+    "STATE_LISTENING": "聆听中...",
+    "STATE_SPEAKING": "说话中...",
+
+    "SettingsUI_Title": "设置",
+    "SettingsUI_Microphone": "麦克风",
+    "SettingsUI_Volume":  "音量",
+    "SettingsUI_Theme": "主题",
+    "SettingsUI_Fill":  "填充"
+}
