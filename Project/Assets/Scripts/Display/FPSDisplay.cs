@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace XiaoZhi.Display
+namespace XiaoZhi.Unity
 {
     public class FPSDisplay : MonoBehaviour
     {
@@ -21,7 +21,7 @@ namespace XiaoZhi.Display
             _style = new GUIStyle
             {
                 fontSize = 20,
-                normal = { textColor = Color.white },
+                normal = { textColor = Color.green },
                 fontStyle = FontStyle.Bold
             };
             

@@ -1,9 +1,17 @@
+using System.Globalization;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace XiaoZhi.Unity
 {
-    public class XScrollbar : Scrollbar
+    public class XSlider : Slider
     {
+        [SerializeField] private TextMeshProUGUI _value;
+        [SerializeField] private TextMeshProUGUI _from;
+        [SerializeField] private TextMeshProUGUI _to;
+
         private ColourModifier[] _colourModifiers;
 
         private ColourModifier[] GetColourModifiers()
@@ -16,23 +24,40 @@ namespace XiaoZhi.Unity
         {
             base.OnEnable();
             transition = Transition.None;
-            ThemeManager.OnThemeChanged.AddListener(OnThemeChanged);
+            onValueChanged.AddListener(OnValueChanged);
         }
 
         protected override void OnDisable()
         {
             base.OnDisable();
-            ThemeManager.OnThemeChanged.RemoveListener(OnThemeChanged);
+            onValueChanged.RemoveListener(OnValueChanged);
+        }
+        
+        public override void OnSelect(BaseEventData eventData)
+        {
+            if (!Config.IsMobile())
+                base.OnSelect(eventData);
+        }
+
+        public override void OnDeselect(BaseEventData eventData)
+        {
+            if (!Config.IsMobile())
+                base.OnDeselect(eventData);
         }
 
         protected override void DoStateTransition(SelectionState state, bool instant)
         {
             UpdateColor();
+            if (_value)
+                _value.transform.parent.gameObject.SetActive(
+                    currentSelectionState is SelectionState.Pressed or SelectionState.Selected);
         }
 
-        private void OnThemeChanged(ThemeSettings.Theme theme)
+        private void OnValueChanged(float number)
         {
-            UpdateColor();
+            if (_value) _value.text = number.ToString(CultureInfo.InvariantCulture);
+            if (_from) _from.text = minValue.ToString(CultureInfo.InvariantCulture);
+            if (_to) _to.text = maxValue.ToString(CultureInfo.InvariantCulture);
         }
 
         private void UpdateColor()
@@ -51,6 +76,6 @@ namespace XiaoZhi.Unity
                 SelectionState.Disabled => ThemeSettings.Action.Disabled,
                 _ => ThemeSettings.Action.Default
             };
-        } 
+        }
     }
 }

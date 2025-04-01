@@ -1,7 +1,8 @@
 namespace XiaoZhi.Unity
 {
-    internal enum UILayer
+    public enum UILayer
     {
+        None,
         Scene,
         Module,
         Popup,

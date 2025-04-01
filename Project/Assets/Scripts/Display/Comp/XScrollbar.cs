@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace XiaoZhi.Unity
 {
-    public class XButton : Button
+    public class XScrollbar : Scrollbar
     {
         private ColourModifier[] _colourModifiers;
 
@@ -12,34 +12,26 @@ namespace XiaoZhi.Unity
             _colourModifiers ??= GetComponentsInChildren<ColourModifier>(true);
             return _colourModifiers;
         }
-        
-        public override void OnSelect(BaseEventData eventData)
-        {
-        }
-
-        public override void OnDeselect(BaseEventData eventData)
-        {
-        }
 
         protected override void OnEnable()
         {
             base.OnEnable();
-            ThemeManager.OnThemeChanged.AddListener(OnThemeChanged);
+            transition = Transition.None;
+        }
+        
+        public override void OnSelect(BaseEventData eventData)
+        {
+            if (!Config.IsMobile())
+                base.OnSelect(eventData);
         }
 
-        protected override void OnDisable()
+        public override void OnDeselect(BaseEventData eventData)
         {
-            base.OnDestroy();
-            ThemeManager.OnThemeChanged.RemoveListener(OnThemeChanged);
+            if (!Config.IsMobile())
+                base.OnDeselect(eventData);
         }
 
         protected override void DoStateTransition(SelectionState state, bool instant)
-        {
-            base.DoStateTransition(state, instant);
-            UpdateColor();
-        }
-
-        private void OnThemeChanged(ThemeSettings.Theme theme)
         {
             UpdateColor();
         }

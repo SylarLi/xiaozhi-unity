@@ -2,8 +2,10 @@
   "dependencies": {
     "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
     "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
+    "com.tlabaltoh.sdf-ui-toolkit": "https://github.com/TLabAltoh/Unity-SDF-UI-Toolkit.git#upm",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.collab-proxy": "2.7.1",
+    "com.unity.device-simulator.devices": "1.0.0",
     "com.unity.ide.rider": "3.0.34",
     "com.unity.ide.trae": "https://github.com/codeMonkeyWang/com.unity.ide.trae.git",
     "com.unity.ide.visualstudio": "2.0.22",

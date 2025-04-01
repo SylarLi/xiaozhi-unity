@@ -14,6 +14,17 @@
       "dependencies": {},
       "hash": "36d3260fdca03bf6feb105c67022d1fd7629dd2f"
     },
+    "com.tlabaltoh.sdf-ui-toolkit": {
+      "version": "https://github.com/TLabAltoh/Unity-SDF-UI-Toolkit.git#upm",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.mathematics": "1.2.6",
+        "com.unity.burst": "1.8.17",
+        "com.unity.nuget.newtonsoft-json": "3.0.2"
+      },
+      "hash": "13ff4ec1cb4bd8fda3aa4db3b6a9ef87b1d7369a"
+    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
@@ -32,6 +43,13 @@
     },
     "com.unity.collab-proxy": {
       "version": "2.7.1",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.device-simulator.devices": {
+      "version": "1.0.0",
       "depth": 0,
       "source": "registry",
       "dependencies": {},

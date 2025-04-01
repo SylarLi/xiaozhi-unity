@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -8,19 +9,18 @@ namespace XiaoZhi.Unity
 {
     public class Config
     {
-        private static Config _instance;
-        public static Config Instance => _instance ??= LoadConfig();
+        public static Config Instance { get; private set; }
 
-        private static Config LoadConfig()
+        public static async UniTask LoadConfig()
         {
             const string configPath = "config.json";
             if (!FileUtility.FileExists(FileUtility.FileType.StreamingAssets, configPath))
                 throw new InvalidDataException("配置文件不存在：" + configPath);
-            var jsonContent = FileUtility.ReadAllText(FileUtility.FileType.StreamingAssets, configPath);
-            return JsonConvert.DeserializeObject<Config>(jsonContent);
+            var jsonContent = await FileUtility.ReadAllTextAsync(FileUtility.FileType.StreamingAssets, configPath);
+            Instance = JsonConvert.DeserializeObject<Config>(jsonContent);
         }
 
-        public static string BuildOTAPostData(string macAddress, string boardName)
+        public static string BuildOtaPostData(string macAddress, string boardName)
         {
             const string configPath = "ota.json";
             if (!FileUtility.FileExists(FileUtility.FileType.StreamingAssets, configPath))
@@ -31,23 +31,23 @@ namespace XiaoZhi.Unity
             return content;
         }
 
-        private string _uuid;
+        private static string _uuid;
         
-        private string _macAddress;
+        private static string _macAddress;
 
-        public string GetUUid()
+        public static string GetUUid()
         {
             _uuid ??= Guid.NewGuid().ToString("d");
             return _uuid;
         }
         
-        public string GetMacAddress()
+        public static string GetMacAddress()
         {
             _macAddress ??= BuildMacAddress();
             return _macAddress;
         }
 
-        private string BuildMacAddress()
+        private static string BuildMacAddress()
         {
             if (!string.IsNullOrEmpty(Config.Instance.CustomMacAddress))
                 return Config.Instance.CustomMacAddress;
@@ -84,15 +84,23 @@ namespace XiaoZhi.Unity
             return string.Empty;
         }
 
-        public string GetBoardName()
+        public static string GetBoardName()
         {
             return Application.productName;
         }
 
-        public string GetVersion()
+        public static string GetVersion()
         {
             return Application.version;
         }
+
+        public static bool IsMobile()
+        {
+            return Application.isMobilePlatform;
+        }
+        
+        [JsonProperty("LANG_CODE")]
+        public string LangCode { get; private set; }
 
         [JsonProperty("CUSTOM_MAC_ADDRESS")] public string CustomMacAddress { get; private set; }
 

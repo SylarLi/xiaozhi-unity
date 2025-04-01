@@ -54,16 +54,18 @@ namespace XiaoZhi.Unity
         public async UniTaskVoid Start()
         {
             await InitUI();
+            await Config.LoadConfig();
+            await Lang.Strings.LoadStrings();
             SetDeviceState(DeviceState.Starting);
-            _display.SetStatus("正在加载资源");
+            _display.SetStatus(Lang.Strings.Get("LOADING_RESOURCES"));
             await PrepareResource(_cts.Token);
             InitializeAudio();
-            _display.SetStatus("正在加载协议");
+            _display.SetStatus(Lang.Strings.Get("LOADING_PROTOCOL"));
             InitializeProtocol();
             await CheckNewVersion();
             if (Config.Instance.UseWakeWordDetect)
             {
-                _display.SetStatus("正在加载模型");
+                _display.SetStatus(Lang.Strings.Get("LOADING_MODEL"));
                 await InitializeWakeService();
             }
 
@@ -95,8 +97,8 @@ namespace XiaoZhi.Unity
 
         private async UniTask InitUI()
         {
-            _display = await _context.UIManager.ShowModuleUI<UIDisplay>();
-            _display.RegisterApp(this);
+            await _context.UIManager.Load();
+            _display = await _context.UIManager.ShowSceneUI<MainUI>();
         }
 
         private async UniTask PrepareResource(CancellationToken cancellationToken)
@@ -127,45 +129,40 @@ namespace XiaoZhi.Unity
             {
                 case DeviceState.Unknown:
                 case DeviceState.Idle:
-                    _display.SetStatus("待机中");
+                    _display.SetStatus(Lang.Strings.Get("STATE_STANDBY"));
                     _display.SetEmotion("neutral");
                     break;
 
                 case DeviceState.Connecting:
-                    _display.SetStatus("正在连接");
-                    _display.SetChatMessage("system", "");
+                    _display.SetStatus(Lang.Strings.Get("STATE_CONNECTING"));
+                    _display.SetChatMessage(ChatRole.System, "");
                     break;
 
                 case DeviceState.Listening:
-                    _display.SetStatus("正在聆听");
+                    _display.SetStatus(Lang.Strings.Get("STATE_LISTENING"));
                     _display.SetEmotion("neutral");
                     _opusDecoder.ResetState();
                     _opusEncoder.ResetState();
                     break;
 
                 case DeviceState.Speaking:
-                    _display.SetStatus("正在说话");
+                    _display.SetStatus(Lang.Strings.Get("STATE_SPEAKING"));
                     _opusDecoder.ResetState();
                     break;
                 case DeviceState.Starting:
-                    _display.SetStatus("启动中");
+                    _display.SetStatus(Lang.Strings.Get("STATE_STARTING"));
                     _display.SetEmotion("neutral");
+                    break;
+                case DeviceState.Activating:
+                    _display.SetStatus(Lang.Strings.Get("ACTIVATION"));
+                    _display.SetEmotion("happy");
                     break;
                 case DeviceState.WifiConfiguring:
                 case DeviceState.Upgrading:
-                case DeviceState.Activating:
                 case DeviceState.FatalError:
                 default:
                     break;
             }
-        }
-
-        private void Alert(string status, string message, string emotion = null)
-        {
-            _display.SetStatus(status);
-            _display.SetChatMessage("system", message);
-            _display.SetEmotion(emotion);
-            Debug.Log("Alert: " + status + " " + message + " " + emotion);
         }
 
         private async UniTask AbortSpeaking(AbortReason reason)
@@ -290,12 +287,6 @@ namespace XiaoZhi.Unity
             _outputResampler.Configure(_opusDecodeSampleRate, _codec.OutputSampleRate);
         }
 
-        private async UniTask ShowActivationCode()
-        {
-            Alert(Lang.Strings.ACTIVATION, _ota.ActivationMessage, "happy");
-            await UniTask.Delay(1000);
-        }
-
         private async UniTask InitializeWakeService()
         {
             _wakeService = new SherpaOnnxWakeService();
@@ -352,7 +343,7 @@ namespace XiaoZhi.Unity
         private void InitializeProtocol()
         {
             _protocol = new WebSocketProtocol();
-            _protocol.OnNetworkError += (error) => { Alert(Lang.Strings.ERROR, error, "sad"); };
+            _protocol.OnNetworkError += (error) => { _context.UIManager.ShowNotificationUI(error).Forget(); };
             _protocol.OnIncomingAudio += OutputAudio;
             _protocol.OnChannelOpened += () =>
             {
@@ -363,7 +354,7 @@ namespace XiaoZhi.Unity
             };
             _protocol.OnChannelClosed += () =>
             {
-                _display.SetChatMessage("system", "");
+                _display.SetChatMessage(ChatRole.System, "");
                 SetDeviceState(DeviceState.Idle);
             };
             _protocol.OnIncomingJson += message =>
@@ -410,7 +401,7 @@ namespace XiaoZhi.Unity
                             case "sentence_start":
                             {
                                 var text = message["text"].ToString();
-                                if (!string.IsNullOrEmpty(text)) _display.SetChatMessage("assistant", text);
+                                if (!string.IsNullOrEmpty(text)) _display.SetChatMessage(ChatRole.Assistant, text);
                                 break;
                             }
                         }
@@ -420,7 +411,7 @@ namespace XiaoZhi.Unity
                     case "stt":
                     {
                         var text = message["text"].ToString();
-                        if (!string.IsNullOrEmpty(text)) _display.SetChatMessage("user", text);
+                        if (!string.IsNullOrEmpty(text)) _display.SetChatMessage(ChatRole.User, text);
                         break;
                     }
                     case "llm":
@@ -436,15 +427,14 @@ namespace XiaoZhi.Unity
 
         private async UniTask CheckNewVersion()
         {
-            var config = Config.Instance;
-            var macAddr = config.GetMacAddress();
-            var boardName = config.GetBoardName();
+            var macAddr = Config.GetMacAddress();
+            var boardName = Config.GetBoardName();
             _ota = new OTA();
             _ota.SetCheckVersionUrl(Config.Instance.OtaVersionUrl);
             _ota.SetHeader("Device-Id", macAddr);
-            _ota.SetHeader("Accept-Language", Lang.Code.Value);
-            _ota.SetHeader("User-Agent", $"{boardName}/{config.GetVersion()}");
-            _ota.SetPostData(Config.BuildOTAPostData(macAddr, boardName));
+            _ota.SetHeader("Accept-Language", Config.Instance.LangCode);
+            _ota.SetHeader("User-Agent", $"{boardName}/{Config.GetVersion()}");
+            _ota.SetPostData(Config.BuildOtaPostData(macAddr, boardName));
             const int maxRetry = 10;
             for (var i = 0; i < maxRetry; i++)
             {
@@ -453,7 +443,7 @@ namespace XiaoZhi.Unity
                     if (!string.IsNullOrEmpty(_ota.ActivationCode))
                     {
                         SetDeviceState(DeviceState.Activating);
-                        await ShowActivationCode();
+                        _display.SetChatMessage(ChatRole.System, _ota.ActivationMessage);
                         for (var t = 0; t < 60; t++)
                         {
                             if (_deviceState == DeviceState.Idle) break;
@@ -474,12 +464,12 @@ namespace XiaoZhi.Unity
 
         private bool IsFirstEnter()
         {
-            return !_settings.HasKey("i_am_xiaozhi");
+            return !_settings.HasKey("i_have_played_with_xiaozhi");
         }
 
         private void MarkAsNotFirstEnter()
         {
-            _settings.SetInt("i_am_xiaozhi", 1);
+            _settings.SetInt("i_have_played_with_xiaozhi", 1);
             _settings.Save();
         }
     }

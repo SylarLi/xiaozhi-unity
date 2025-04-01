@@ -1,3 +1,5 @@
+using DG.Tweening;
+
 namespace XiaoZhi.Unity
 {
     public class Context
@@ -9,15 +11,20 @@ namespace XiaoZhi.Unity
         public void Init()
         {
             UIManager = new UIManager();
-            UIManager.Init();
+            UIManager.Init(this);
             App = new App();
             App.Init(this);
         }
 
         public void Dispose()
         {
-            App.Dispose();
+            DOTween.KillAll();
             UIManager.Dispose();
+            App.Dispose();
         }
+        
+        private static string _uuid;
+        
+        private static string _macAddress;
     }
 }

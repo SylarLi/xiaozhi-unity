@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace XiaoZhi.Unity
 {
-    public class UIDisplay : BaseUI, IDisplay
+    public class MainUI : BaseUI, IDisplay
     {
         private static readonly Dictionary<string, string> Emojis = new()
         {
@@ -15,10 +15,9 @@ namespace XiaoZhi.Unity
             { "neutral", "🙂" },
             { "thinking", "🤔" }
         };
-        
+
         private const int SpectrumUpdateInterval = 50;
-        
-        private App _app;
+
         private TMP_Text _textStatus;
         private TMP_Text _textChat;
         private TMP_Text _textEmotion;
@@ -26,13 +25,9 @@ namespace XiaoZhi.Unity
         private Button _btnChat;
         private Button _btnTest;
         private XInputWave _xInputWave;
-        private CancellationTokenSource _loopCts;
 
-        public void RegisterApp(App app)
-        {
-            _app = app;
-        }
-        
+        private CancellationTokenSource _cts;
+
         public override string GetResourcePath()
         {
             return "MainUI/MainUI";
@@ -44,30 +39,30 @@ namespace XiaoZhi.Unity
             _textChat = Tr.Find("Chat").GetComponent<TMP_Text>();
             _textEmotion = Tr.Find("Emotion").GetComponent<TMP_Text>();
             _btnSet = Tr.Find("BtnSet").GetComponent<Button>();
-            _btnSet.onClick.AddListener(() =>
-            {
-                // Todo...
-            });
+            _btnSet.onClick.AddListener(() => { ShowModuleUI<SettingsUI>().Forget(); });
             _xInputWave = Tr.Find("Spectrum").GetComponent<XInputWave>();
         }
 
         protected override async UniTask OnShow(BaseUIData data = null)
         {
-            SetStatus("");
-            SetChatMessage("system", "");
             SetEmotion("neutral");
-            _loopCts = new CancellationTokenSource();
-            UniTask.Void(LoopUpdate, _loopCts.Token);
+            _textStatus.text = "";
+            _textChat.text = "";
+            _cts = new CancellationTokenSource();
+            UniTask.Void(LoopUpdate, _cts.Token);
             await UniTask.CompletedTask;
         }
 
-        protected override void OnHide()
+        protected override async UniTask OnHide()
         {
-            if (_loopCts != null)
+            if (_cts != null)
             {
-                _loopCts.Cancel();
-                _loopCts.Dispose();
+                _cts.Cancel();
+                _cts.Dispose();
+                _cts = null;
             }
+
+            await UniTask.CompletedTask;
         }
 
         public void SetStatus(string status)
@@ -80,18 +75,19 @@ namespace XiaoZhi.Unity
             _textEmotion.text = Emojis[emotion];
         }
 
-        public void SetChatMessage(string role, string content)
+        public void SetChatMessage(ChatRole role, string content)
         {
             _textChat.text = content;
         }
-        
+
         private async UniTaskVoid LoopUpdate(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
                 await UniTask.Delay(SpectrumUpdateInterval, DelayType.Realtime, PlayerLoopTiming.Update, token);
                 await UniTask.SwitchToThreadPool();
-                var dirty = _xInputWave.UpdateSpectrumData(_app.GetCodec());
+                var codec = Context.App.GetCodec();
+                var dirty = codec != null && _xInputWave.UpdateSpectrumData(codec);
                 await UniTask.SwitchToMainThread();
                 if (dirty) _xInputWave.SetVerticesDirty();
             }

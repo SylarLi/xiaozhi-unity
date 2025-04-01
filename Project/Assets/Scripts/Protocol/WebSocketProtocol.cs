@@ -41,8 +41,8 @@ namespace XiaoZhi.Unity
             var config = Config.Instance;
             var url = config.WebSocketUrl;
             var token = config.WebSocketAccessToken;
-            var deviceId = config.GetMacAddress();
-            var clientId = config.GetUUid();
+            var deviceId = Config.GetMacAddress();
+            var clientId = Config.GetUUid();
             Debug.Log($"url: {url}");
             Debug.Log($"token: {token}");
             Debug.Log($"deviceId: {deviceId}");

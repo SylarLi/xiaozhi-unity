@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace XiaoZhi.Unity
 {
@@ -52,6 +53,15 @@ namespace XiaoZhi.Unity
         {
             for (var i = from.Length - 1; i >= 0; i--)
                 to[i] = (short)(from[i] * short.MaxValue);
+        }
+        
+        public static void EnsureChildren(Transform tr, int length)
+        {
+            for (var i = tr.childCount - 1; i >= length; i--)
+                tr.GetChild(i).gameObject.SetActive(false);
+            var child = tr.GetChild(0);
+            for (var i = tr.childCount; i < length; i++)
+                Object.Instantiate(child, tr);
         }
     }
 }

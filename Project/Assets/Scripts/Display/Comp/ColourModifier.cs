@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -7,33 +6,41 @@ namespace XiaoZhi.Unity
 {
     [ExecuteAlways]
     [RequireComponent(typeof(Graphic))]
-    public abstract class ColourModifier : UIBehaviour
+    public class ColourModifier : UIBehaviour
     {
-        [NonSerialized] private Graphic _graphic;
+        [SerializeField] private ThemeSettings.Background _background;
+        
+        [SerializeField] private bool _react;
+        
+        [SerializeField][Range(0, 1)] private float _alpha = 1.0f;
 
-        [SerializeField] private Colour _colour;
+        private Graphic _graphic;
 
-        protected override void Awake()
+        private ThemeSettings.Action _action = ThemeSettings.Action.Default;
+        
+        private Graphic GetGraphic()
         {
-            base.Awake();
-            _graphic = GetComponent<Graphic>();
+            _graphic ??= GetComponent<Graphic>();
+            return _graphic;
         }
 
         protected override void OnEnable()
         {
             base.OnEnable();
-            _graphic.SetVerticesDirty();
+            ThemeManager.OnThemeChanged.AddListener(OnThemeChanged);
+            UpdateColor();
         }
 
         protected override void OnDisable()
         {
             base.OnDisable();
-            _graphic.SetVerticesDirty();
+            ThemeManager.OnThemeChanged.RemoveListener(OnThemeChanged);
+            UpdateColor();
         }
 
         protected override void OnDidApplyAnimationProperties()
         {
-            _graphic.SetVerticesDirty();
+            UpdateColor();
             base.OnDidApplyAnimationProperties();
         }
 
@@ -41,16 +48,34 @@ namespace XiaoZhi.Unity
         protected override void OnValidate()
         {
             base.OnValidate();
-            _graphic.SetVerticesDirty();
+            UpdateColor();
+        }
+#endif
+        
+        private void OnThemeChanged(ThemeSettings.Theme theme)
+        {
+            UpdateColor();
         }
 
-#endif
-
-        public override Material GetModifiedMaterial(Material baseMaterial)
+        private void UpdateColor()
         {
-            if (baseMaterial == null) return null;
-            baseMaterial.color = ThemeManager.FetchColor(ThemeManager.Theme, _colour);
-            return baseMaterial;
+            var color = ThemeManager.FetchColor(ThemeManager.Theme, _background, _action);
+            color.a *= _alpha;
+            GetGraphic().color = color;
+        }
+        
+        public void SetBackground(ThemeSettings.Background background)
+        {
+            if (!_react) return;
+            _background = background;
+            UpdateColor();
+        }
+
+        public void SetAction(ThemeSettings.Action action)
+        {
+            if (!_react) return;
+            _action = action;
+            UpdateColor();
         }
     }
 }

@@ -1,31 +1,58 @@
+using System;
+using DG.Tweening;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace XiaoZhi.Unity
 {
-    public class XToggle : Toggle
+    public class XRadio : Toggle
     {
-        private ColourModifier[] _colourModifiers;
-
-        private ColourModifier[] GetColourModifiers()
+        [Serializable]
+        public struct ColorDef
         {
-            _colourModifiers ??= GetComponentsInChildren<ColourModifier>(true);
-            return _colourModifiers;
+            public Color Background;
+            public Color Circle;
+            public Color CircleHover;
+            public Color CircleSelected;
+            public Color CirclePressed;
+            public Color CircleDisabled;
         }
+
+        [SerializeField] private ColorDef _off;
+        [SerializeField] private ColorDef _on;
+        [SerializeField] private Graphic _bg;
+        [SerializeField] private Graphic _circle;
+        [SerializeField] private Graphic _offGraphic;
+        [SerializeField] private Graphic _onGraphic;
         
         protected override void OnEnable()
         {
             base.OnEnable();
             transition = Transition.None;
-            ThemeManager.OnThemeChanged.AddListener(OnThemeChanged);
             onValueChanged.AddListener(OnValueChanged);
-            UpdateSpot();
+            UpdateColor();
+            UpdateToggle();
         }
 
         protected override void OnDisable()
         {
-            base.OnDestroy();
-            ThemeManager.OnThemeChanged.RemoveListener(OnThemeChanged);
+            base.OnDisable();
             onValueChanged.RemoveListener(OnValueChanged);
+            _circle.transform.DOKill();
+        }
+        
+        public override void OnSelect(BaseEventData eventData)
+        {
+            if (!Config.IsMobile())
+                base.OnSelect(eventData);
+        }
+
+        public override void OnDeselect(BaseEventData eventData)
+        {
+            if (!Config.IsMobile())
+                base.OnDeselect(eventData);
         }
 
         protected override void DoStateTransition(SelectionState state, bool instant)
@@ -33,38 +60,42 @@ namespace XiaoZhi.Unity
             UpdateColor();
         }
 
-        private void OnThemeChanged(ThemeSettings.Theme theme)
-        {
-            UpdateColor();
-        }
-
         private void OnValueChanged(bool _)
         {
-            UpdateSpot();
+            UpdateColor();
+            UpdateToggle();
         }
 
-        private void UpdateSpot()
+        private void UpdateToggle()
         {
-            foreach (var modifier in GetColourModifiers())
-                modifier.SetBackground(isOn ? ThemeSettings.Background.SpotThin : ThemeSettings.Background.Stateful);
+            if (_circle && _bg)
+            {
+                var radius = _circle.rectTransform.rect.height * 0.5f;
+                var gap = _bg.rectTransform.rect.height * 0.5f - radius;
+                var pos = -_bg.rectTransform.rect.width * 0.5f + gap + radius;
+                _circle.rectTransform.DOKill();
+                _circle.rectTransform.DOAnchorPosX(isOn ? -pos : pos, 0.2f);
+            }
+            
+            if (_offGraphic) _offGraphic.enabled = !isOn;
+            if (_onGraphic) _onGraphic.enabled = isOn;
         }
-
+        
         private void UpdateColor()
         {
-            foreach (var modifier in GetColourModifiers())
-                modifier.SetAction(GetCurrentAction());
-        }
-
-        private ThemeSettings.Action GetCurrentAction()
-        {
-            return currentSelectionState switch
+            var colorDef = isOn? _on : _off;
+            if (_bg) _bg.color = colorDef.Background;
+            if (_circle)
             {
-                SelectionState.Highlighted => ThemeSettings.Action.Hover,
-                SelectionState.Selected => ThemeSettings.Action.Selected,
-                SelectionState.Pressed => ThemeSettings.Action.Pressed,
-                SelectionState.Disabled => ThemeSettings.Action.Disabled,
-                _ => ThemeSettings.Action.Default
-            };
-        } 
+                _circle.color = currentSelectionState switch
+                {
+                    SelectionState.Highlighted => colorDef.CircleHover,
+                    SelectionState.Selected => colorDef.CircleSelected,
+                    SelectionState.Pressed => colorDef.CirclePressed,
+                    SelectionState.Disabled => colorDef.CircleDisabled,
+                    _ => colorDef.Circle
+                };
+            }
+        }
     }
 }

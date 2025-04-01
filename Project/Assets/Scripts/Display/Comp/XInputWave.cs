@@ -4,7 +4,7 @@ using UnityEngine.UI;
 namespace XiaoZhi.Unity
 {
     [RequireComponent(typeof(RectTransform), typeof(CanvasRenderer))]
-    public class UIInputWave : XMaskableGraphic
+    public class XInputWave : MaskableGraphic
     {
         private const float SpectrumGap = 0.5f;
         private const float BaseHeight = 0.1f; // 基础高度占总高度的比例
