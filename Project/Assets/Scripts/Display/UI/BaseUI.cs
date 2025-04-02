@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using Object = UnityEngine.Object;
 
 namespace XiaoZhi.Unity
 {
@@ -37,6 +38,12 @@ namespace XiaoZhi.Unity
             OnInit();
         }
 
+        public void Destroy()
+        {
+            OnDestroy();
+            if (Go) Object.Destroy(Go);
+        }
+
         public async UniTask Show(BaseUIData data = null)
         {
             Go.SetActive(true);
@@ -65,6 +72,11 @@ namespace XiaoZhi.Unity
 
         protected virtual void OnInit()
         {
+        }
+
+        protected virtual void OnDestroy()
+        {
+            
         }
 
         protected virtual async UniTask OnShow(BaseUIData data = null)
@@ -164,6 +176,21 @@ namespace XiaoZhi.Unity
             return await _uiService.ShowModuleUI<T>(data);
         }
 
+        public async UniTask<T> ShowPopupUI<T>(BaseUIData data = null) where T : BaseUI, new()
+        {
+            return await _uiService.ShowPopupUI<T>(data);
+        }
+
+        public async UniTask ShowNotificationUI<T>(NotificationUIData notification) where T : NotificationUI, new()
+        {
+            await _uiService.ShowNotificationUI<T>(notification);
+        }
+
+        public async UniTask ShowNotificationUI(string message, float duration = 3)
+        {
+            await _uiService.ShowNotificationUI(message, duration);
+        }
+
         public async UniTask CloseUI<T>() where T : BaseUI
         {
             await _uiService.CloseUI<T>();
@@ -174,9 +201,19 @@ namespace XiaoZhi.Unity
             await _uiService.CloseUI(ui);
         }
 
-        public void CloseAllUI()
+        public async UniTask DestroyUI<T>() where T : BaseUI
         {
-            _uiService.CloseAllUI();
+            await _uiService.DestroyUI<T>();
+        }
+
+        public async UniTask DestroyUI(BaseUI ui)
+        {
+            await _uiService.DestroyUI(ui);
+        }
+
+        public void Dispose()
+        {
+            _uiService.Dispose();
         }
     }
 

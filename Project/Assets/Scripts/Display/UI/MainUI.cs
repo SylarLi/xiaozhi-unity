@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
@@ -55,6 +57,9 @@ namespace XiaoZhi.Unity
             _textChat.text = "";
             _cts = new CancellationTokenSource();
             UniTask.Void(LoopUpdate, _cts.Token);
+            Context.App.OnDeviceStateUpdate -= OnDeviceStateUpdate;
+            Context.App.OnDeviceStateUpdate += OnDeviceStateUpdate;
+            OnDeviceStateUpdate(Context.App.GetDeviceState());
             await UniTask.CompletedTask;
         }
 
@@ -67,6 +72,7 @@ namespace XiaoZhi.Unity
                 _cts = null;
             }
 
+            Context.App.OnDeviceStateUpdate -= OnDeviceStateUpdate;
             await UniTask.CompletedTask;
         }
 
@@ -81,24 +87,23 @@ namespace XiaoZhi.Unity
             {
                 case "loading":
                     _goLoading.SetActive(emotion == "loading");
-                    _textEmotion.text = "";                    
+                    _textEmotion.text = "";
                     break;
                 default:
                     _goLoading.SetActive(false);
                     _textEmotion.text = Emojis[emotion];
                     break;
             }
-            
         }
 
         public void SetChatMessage(ChatRole role, string content)
         {
             if (_textEmotion.text == "🤖")
             {
-                _textChat.text = $"<link=\"{Config.Instance.ActivationURL}\">{content}</link>";
+                _textChat.text = $"<u><link=\"{Config.Instance.ActivationURL}\">{content}</link></u>";
                 return;
             }
-            
+
             _textChat.text = content;
         }
 
@@ -113,6 +118,12 @@ namespace XiaoZhi.Unity
                 await UniTask.SwitchToMainThread();
                 if (dirty) _xInputWave.SetVerticesDirty();
             }
+        }
+
+        private void OnDeviceStateUpdate(DeviceState state)
+        {
+            _btnSet.gameObject.SetActive(state is DeviceState.Idle or DeviceState.Connecting or DeviceState.Speaking
+                or DeviceState.Listening);
         }
     }
 }

@@ -138,7 +138,11 @@ namespace XiaoZhi.Unity
 
         private void OnToggleLang(Toggle toggle, int index, bool isOn)
         {
-            if (isOn) Lang.SetLangCode((Lang.Code)index);
+            if (isOn)
+            {
+                Lang.SetLangCode((Lang.Code)index);
+                ShowNotificationUI(Lang.Strings.Get("SettingsUI_Lang_Change_Tips")).Forget();
+            }
         }
     }
 }

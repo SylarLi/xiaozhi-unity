@@ -1,0 +1,28 @@
+{
+    "ACTIVATION": "Activate Device",
+    "ACTIVATION_CODE_COPIED": "Activation code copied. Click the link below to activate the device.",
+    "ACTIVATION_FAILED_TIPS": "Activation failed. Please try restarting the application.",
+    "LOADING_RESOURCES": "Loading Resources...",
+    "LOADING_MODEL": "Loading Model...",
+    "STATE_STARTING": "Starting",
+    "STATE_STANDBY": "Standby",
+    "STATE_CONNECTING": "Connecting",
+    "STATE_LISTENING": "Listening",
+    "STATE_SPEAKING": "Speaking",
+    "STATE_ERROR": "Error",
+
+    "SettingsUI_Title": "Settings",
+    "SettingsUI_Microphone": "Microphone",
+    "SettingsUI_Volume": "Volume",
+    "SettingsUI_Theme": "Theme",
+    "SettingsUI_Fill": "Fill",
+    "SettingsUI_Lang": "Language",
+    "SettingsUI_Lang_Change_Tips": "Language changed successfully. Please restart to take effect.",
+
+    "Permission_ReadStorage": "Storage Read",
+    "Permission_WriteStorage": "Storage Write",
+    "Permission_Camera": "Camera",
+    "Permission_Microphone": "Microphone",
+    "Permission_One_Request_Failed": "{0} Permission request failed.",
+    "Permission_Request_Failed": "Permission request failed. Please try restarting the application."
+}

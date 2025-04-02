@@ -1,7 +1,9 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.iOS;
 using Debug = UnityEngine.Debug;
 
 namespace XiaoZhi.Unity
@@ -10,16 +12,14 @@ namespace XiaoZhi.Unity
     {
         Unknown,
         Starting,
-        WifiConfiguring,
         Idle,
         Connecting,
         Listening,
         Speaking,
-        Upgrading,
         Activating,
-        FatalError
+        Error
     }
-    
+
     public class App : IDisposable
     {
         private Context _context;
@@ -43,6 +43,8 @@ namespace XiaoZhi.Unity
         public AudioCodec GetCodec() => _codec;
         private Settings _settings;
 
+        public event Action<DeviceState> OnDeviceStateUpdate;
+
         public void Init(Context context)
         {
             _context = context;
@@ -57,9 +59,22 @@ namespace XiaoZhi.Unity
             await Config.LoadConfig();
             await Lang.Strings.LoadStrings();
             SetDeviceState(DeviceState.Starting);
-            var authorized = await CheckRequestPermission();
-            if (!authorized) return;
-            await CheckNewVersion();
+            if (!await CheckRequestPermission())
+            {
+                SetDeviceState(DeviceState.Error);
+                _display.SetChatMessage(ChatRole.System, Lang.Strings.Get("Permission_Request_Failed"));
+                return;
+            }
+
+            if (!await CheckNewVersion())
+            {
+                SetDeviceState(DeviceState.Error);
+                _display.SetChatMessage(ChatRole.System, Lang.Strings.Get("ACTIVATION_FAILED_TIPS"));
+                return;
+            }
+
+            SetDeviceState(DeviceState.Starting);
+            _display.SetChatMessage(ChatRole.System, "");
             if (Config.Instance.UseWakeWordDetect)
             {
                 _display.SetStatus(Lang.Strings.Get("LOADING_RESOURCES"));
@@ -67,7 +82,7 @@ namespace XiaoZhi.Unity
                 _display.SetStatus(Lang.Strings.Get("LOADING_MODEL"));
                 await InitializeWakeService();
             }
-            
+
             InitializeAudio();
             InitializeProtocol();
             SetDeviceState(DeviceState.Idle);
@@ -158,12 +173,13 @@ namespace XiaoZhi.Unity
                     _display.SetStatus(Lang.Strings.Get("ACTIVATION"));
                     _display.SetEmotion("activation");
                     break;
-                case DeviceState.WifiConfiguring:
-                case DeviceState.Upgrading:
-                case DeviceState.FatalError:
-                default:
+                case DeviceState.Error:
+                    _display.SetStatus(Lang.Strings.Get("STATE_ERROR"));
+                    _display.SetEmotion("error");
                     break;
             }
+
+            OnDeviceStateUpdate?.Invoke(_deviceState);
         }
 
         private async UniTask AbortSpeaking(AbortReason reason)
@@ -426,8 +442,9 @@ namespace XiaoZhi.Unity
             _protocol.Start();
         }
 
-        private async UniTask CheckNewVersion()
+        private async UniTask<bool> CheckNewVersion()
         {
+            var success = false;
             var macAddr = Config.GetMacAddress();
             var boardName = Config.GetBoardName();
             _ota = new OTA();
@@ -436,31 +453,39 @@ namespace XiaoZhi.Unity
             _ota.SetHeader("Accept-Language", Config.Instance.LangCode);
             _ota.SetHeader("User-Agent", $"{boardName}/{Config.GetVersion()}");
             _ota.SetPostData(Config.BuildOtaPostData(macAddr, boardName));
-            const int maxRetry = 10;
+            var showTips = true;
+            const int maxRetry = 100;
             for (var i = 0; i < maxRetry; i++)
             {
                 if (await _ota.CheckVersionAsync())
                 {
-                    if (!string.IsNullOrEmpty(_ota.ActivationCode))
+                    if (string.IsNullOrEmpty(_ota.ActivationCode))
                     {
-                        SetDeviceState(DeviceState.Activating);
-                        _display.SetChatMessage(ChatRole.System, _ota.ActivationMessage);
-                        for (var t = 0; t < 60; t++)
-                        {
-                            if (_deviceState == DeviceState.Idle) break;
-                            await UniTask.Delay(1000);
-                        }
-
-                        if (_deviceState == DeviceState.Idle) break;
-                    }
-                    else
-                    {
+                        success = true;
                         break;
+                    }
+
+                    SetDeviceState(DeviceState.Activating);
+                    _display.SetChatMessage(ChatRole.System, _ota.ActivationMessage);
+                    try
+                    {
+                        GUIUtility.systemCopyBuffer = Regex.Match(_ota.ActivationMessage, @"\d+").Value;
+                        if (showTips)
+                        {
+                            showTips = false;
+                            _context.UIManager.ShowNotificationUI(Lang.Strings.Get("ACTIVATION_CODE_COPIED")).Forget();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
                     }
                 }
 
-                await UniTask.Delay(1000);
+                await UniTask.Delay(3 * 1000);
             }
+            
+            return success;
         }
 
         private async UniTask<bool> CheckRequestPermission()

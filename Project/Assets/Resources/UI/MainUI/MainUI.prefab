@@ -645,6 +645,8 @@ GameObject:
   - component: {fileID: 4165417978297762419}
   - component: {fileID: 7532448791956684510}
   - component: {fileID: 5854515672774259373}
+  - component: {fileID: 4178772753526359768}
+  - component: {fileID: 5675416056523690565}
   m_Layer: 5
   m_Name: Chat
   m_TagString: Untagged
@@ -668,9 +670,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -70}
-  m_SizeDelta: {x: 880, y: 98.8}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -20.600098}
+  m_SizeDelta: {x: 880, y: 0}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &4165417978297762419
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -784,6 +786,32 @@ MonoBehaviour:
   _background: 1
   _react: 0
   _alpha: 1
+--- !u!114 &4178772753526359768
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7401906867525346538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2762684aa9813cc45a60279431fc94b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &5675416056523690565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7401906867525346538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_HorizontalFit: 0
+  m_VerticalFit: 2
 --- !u!1001 &4208383019387443592
 PrefabInstance:
   m_ObjectHideFlags: 0

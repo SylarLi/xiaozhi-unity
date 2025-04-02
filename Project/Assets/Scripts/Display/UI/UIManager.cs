@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace XiaoZhi.Unity
 {
-    public class UIManager : IUIService, IDisposable
+    public class UIManager : IUIService
     {
         private Dictionary<UILayer, GameObject> _canvasMap;
         private readonly Stack<SceneStackData> _stack = new();
@@ -168,7 +168,7 @@ namespace XiaoZhi.Unity
             _currentPopup = ui.GetType().Name;
             return ui;
         }
-        
+
         public async UniTask ShowNotificationUI(string message, float duration = 3.0f)
         {
             await ShowNotificationUI<NotificationUI>(new NotificationUIData(message, duration));
@@ -182,14 +182,9 @@ namespace XiaoZhi.Unity
 
         private async UniTask ProcessNotificationUI()
         {
-            NotificationUI ui;
-            if (_notificationQueue.Count == 0)
-            {
-                ui = FindUI<NotificationUI>();
-                if (ui.IsVisible) await ui.Hide();
-                return;
-            }
-
+            if (_notificationQueue.Count == 0) return;
+            var ui = FindUI<NotificationUI>();
+            if (ui?.IsVisible == true) return;
             var (type, notification) = _notificationQueue.Dequeue();
             var canvas = _canvasMap[UILayer.Notify].transform;
             ui = await EnsureUI<NotificationUI>(type, canvas);
@@ -301,6 +296,7 @@ namespace XiaoZhi.Unity
                     await CloseMaskUI();
                     break;
                 case { Layer: UILayer.Notify }:
+                    await ui.Hide();
                     await ProcessNotificationUI();
                     break;
                 case { Layer: UILayer.Popup }:
@@ -315,22 +311,26 @@ namespace XiaoZhi.Unity
             }
         }
 
-        public void CloseAllUI()
+        public async UniTask DestroyUI<T>() where T : BaseUI
+        {
+            await DestroyUI(FindUI<T>());
+        }
+
+        public async UniTask DestroyUI(BaseUI ui)
+        {
+            if (ui.IsVisible) await ui.Hide();
+            _uiMap.Remove(ui.GetType().Name);
+            ui.Destroy();
+        }
+
+
+        public void Dispose()
         {
             _stack.Clear();
             _notificationQueue.Clear();
             foreach (var ui in _uiMap.Values)
-            {
-                ui.Hide().Forget();
-                Object.Destroy(ui.Go);
-            }
-
+                ui.Destroy();
             _uiMap.Clear();
-        }
-
-        public void Dispose()
-        {
-            CloseAllUI();
         }
 
         private class StackData

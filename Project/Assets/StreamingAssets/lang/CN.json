@@ -1,6 +1,7 @@
 {
     "ACTIVATION": "激活设备",
-    "ERROR": "错误",
+    "ACTIVATION_CODE_COPIED": "激活码已复制，点击下方链接激活设备。",
+    "ACTIVATION_FAILED_TIPS": "激活失败，请尝试重启应用。",
     "LOADING_RESOURCES": "加载资源...",
     "LOADING_MODEL": "加载模型...",
     "STATE_STARTING": "启动中",
@@ -8,6 +9,7 @@
     "STATE_CONNECTING": "连接中",
     "STATE_LISTENING": "聆听中",
     "STATE_SPEAKING": "说话中",
+    "STATE_ERROR": "错误",
 
     "SettingsUI_Title": "设置",
     "SettingsUI_Microphone": "麦克风",
@@ -15,10 +17,12 @@
     "SettingsUI_Theme": "主题",
     "SettingsUI_Fill":  "填充",
     "SettingsUI_Lang":  "语言",
+    "SettingsUI_Lang_Change_Tips":  "语言修改成功，重启后生效。",
 
     "Permission_ReadStorage": "文件读取", 
     "Permission_WriteStorage": "文件写入",
     "Permission_Camera": "相机", 
     "Permission_Microphone":  "录音",
-    "Permission_Request_Failed": "{0}权限请求失败"
+    "Permission_One_Request_Failed": "{0}权限请求失败。",
+    "Permission_Request_Failed": "权限请求失败，请尝试重启应用。"
 }
