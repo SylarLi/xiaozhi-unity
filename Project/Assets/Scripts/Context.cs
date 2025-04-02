@@ -22,9 +22,5 @@ namespace XiaoZhi.Unity
             UIManager.Dispose();
             App.Dispose();
         }
-        
-        private static string _uuid;
-        
-        private static string _macAddress;
     }
 }

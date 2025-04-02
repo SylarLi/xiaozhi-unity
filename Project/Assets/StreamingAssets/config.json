@@ -2,6 +2,7 @@
     "LANG_CODE": "CN",
     "CUSTOM_MAC_ADDRESS": "",
     "OTA_VERSION_URL": "https://api.tenclass.net/xiaozhi/ota/",
+    "ACTIVATION_URL": "https://xiaozhi.me",
     "WEBSOCKET_URL": "wss://api.tenclass.net/xiaozhi/v1/",
     "WEBSOCKET_ACCESS_TOKEN": "test-token",
     "OPUS_FRAME_DURATION_MS": 60,

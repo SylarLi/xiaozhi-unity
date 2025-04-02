@@ -58,8 +58,9 @@ namespace XiaoZhi.Unity
 
         private void UpdateBackground()
         {
+            var background = isOn ? ThemeSettings.Background.SpotThin : ThemeSettings.Background.Stateful;
             foreach (var modifier in GetColourModifiers())
-                modifier.SetBackground(isOn ? ThemeSettings.Background.SpotThin : ThemeSettings.Background.Stateful);
+                modifier.SetBackground(background);
         }
 
         private void UpdateColor()

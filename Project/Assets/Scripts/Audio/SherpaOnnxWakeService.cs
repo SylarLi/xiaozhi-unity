@@ -20,7 +20,7 @@ namespace XiaoZhi.Unity
         {
             var resourceType = FileUtility.FileType.StreamingAssets;
 #if UNITY_ANDROID && !UNITY_EDITOR
-            resourceType = FileUtility.ResourceType.DataPath;
+            resourceType = FileUtility.FileType.DataPath;
 #endif
             _kwsConfig = new KeywordSpotterConfig();
             _kwsConfig.FeatConfig.SampleRate = sampleRate;

@@ -16,18 +16,13 @@ namespace XiaoZhi.Unity
         private void Start()
         {
             _timeleft = _updateInterval;
-            
-            // 初始化GUI样式
             _style = new GUIStyle
             {
                 fontSize = 20,
                 normal = { textColor = Color.green },
                 fontStyle = FontStyle.Bold
             };
-            
-            // 设置显示位置（右下角）
-            _rect = new Rect(Screen.width - 150, Screen.height - 40, 140, 30);
-        }
+         }
 
         private void Update()
         {
@@ -46,8 +41,7 @@ namespace XiaoZhi.Unity
 
         private void OnGUI()
         {
-            // 使用GUILayout可能会影响性能，所以这里直接使用GUI.Label
-            GUI.Label(_rect, $"FPS: {_currentFPS:F1}", _style);
+            GUI.Label(new Rect(Screen.width - 150, Screen.height - 40, 140, 30), $"FPS: {_currentFPS:F1}", _style);
         }
     }
 }

@@ -14,17 +14,6 @@
       "dependencies": {},
       "hash": "36d3260fdca03bf6feb105c67022d1fd7629dd2f"
     },
-    "com.tlabaltoh.sdf-ui-toolkit": {
-      "version": "https://github.com/TLabAltoh/Unity-SDF-UI-Toolkit.git#upm",
-      "depth": 0,
-      "source": "git",
-      "dependencies": {
-        "com.unity.mathematics": "1.2.6",
-        "com.unity.burst": "1.8.17",
-        "com.unity.nuget.newtonsoft-json": "3.0.2"
-      },
-      "hash": "13ff4ec1cb4bd8fda3aa4db3b6a9ef87b1d7369a"
-    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
@@ -207,6 +196,13 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.com"
+    },
+    "com.yasirkula.androidruntimepermissions": {
+      "version": "https://github.com/yasirkula/UnityAndroidRuntimePermissions.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "e1772b4636b4c1d0766fa6ba60510b8c88b2512f"
     },
     "com.unity.modules.ai": {
       "version": "1.0.0",

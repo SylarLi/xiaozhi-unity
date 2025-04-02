@@ -1,5 +1,4 @@
 using System;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.U2D;
 
@@ -7,19 +6,21 @@ namespace XiaoZhi.Unity
 {
     public class ThemeSettings : ScriptableObject
     {
-        [MenuItem("Assets/Create/ThemeSettings")]
-        public static ThemeSettings Get(MenuCommand command)
+#if UNITY_EDITOR
+        [UnityEditor.MenuItem("Assets/Create/ThemeSettings")]
+        public static ThemeSettings Get(UnityEditor.MenuCommand command)
         {
             const string path = "Assets/Resources/ThemeSettings.asset";
-            var asset = AssetDatabase.LoadAssetAtPath<ThemeSettings>(path);
+            var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<ThemeSettings>(path);
             if (!asset)
             {
                 asset = CreateInstance<ThemeSettings>();
-                AssetDatabase.CreateAsset(asset, path);
+                UnityEditor.AssetDatabase.CreateAsset(asset, path);
             }
             
             return asset;
         }
+#endif
 
         public enum Theme
         {

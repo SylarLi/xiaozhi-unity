@@ -49,8 +49,8 @@ namespace XiaoZhi.Unity
 
         private static string BuildMacAddress()
         {
-            if (!string.IsNullOrEmpty(Config.Instance.CustomMacAddress))
-                return Config.Instance.CustomMacAddress;
+            if (!string.IsNullOrEmpty(Instance.CustomMacAddress))
+                return Instance.CustomMacAddress;
 #if UNITY_ANDROID && !UNITY_EDITOR
             using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
             using (var currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
@@ -80,8 +80,9 @@ namespace XiaoZhi.Unity
                 var bytes = adapter.GetPhysicalAddress().GetAddressBytes();
                 return string.Join(":", bytes.Select(b => b.ToString("x2")));
             }
-#endif
+            
             return string.Empty;
+#endif
         }
 
         public static string GetBoardName()
@@ -145,5 +146,8 @@ namespace XiaoZhi.Unity
         
         [JsonProperty("VAD_MODEL_CONFIG")]
         public string VadModelConfig { get; private set; }
+
+        [JsonProperty("ACTIVATION_URL")]
+        public string ActivationURL { get; private set; }
     }
 }

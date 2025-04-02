@@ -19,7 +19,7 @@ namespace XiaoZhi.Unity
         Activating,
         FatalError
     }
-
+    
     public class App : IDisposable
     {
         private Context _context;
@@ -57,18 +57,19 @@ namespace XiaoZhi.Unity
             await Config.LoadConfig();
             await Lang.Strings.LoadStrings();
             SetDeviceState(DeviceState.Starting);
-            _display.SetStatus(Lang.Strings.Get("LOADING_RESOURCES"));
-            await PrepareResource(_cts.Token);
-            InitializeAudio();
-            _display.SetStatus(Lang.Strings.Get("LOADING_PROTOCOL"));
-            InitializeProtocol();
+            var authorized = await CheckRequestPermission();
+            if (!authorized) return;
             await CheckNewVersion();
             if (Config.Instance.UseWakeWordDetect)
             {
+                _display.SetStatus(Lang.Strings.Get("LOADING_RESOURCES"));
+                await PrepareResource(_cts.Token);
                 _display.SetStatus(Lang.Strings.Get("LOADING_MODEL"));
                 await InitializeWakeService();
             }
-
+            
+            InitializeAudio();
+            InitializeProtocol();
             SetDeviceState(DeviceState.Idle);
             UniTask.Void(MainLoop, _cts.Token);
         }
@@ -114,7 +115,7 @@ namespace XiaoZhi.Unity
                 Config.Instance.KeyWordSpotterKeyWordsFile,
                 Config.Instance.VadModelConfig
             };
-            await UniTask.WhenAll(streamingAssets.Select(i => ResourceLoader.CopyStreamingAssetsToDataPath(i, cancellationToken)));
+            await UniTask.WhenAll(streamingAssets.Select(i => FileUtility.CopyStreamingAssetsToDataPath(i, cancellationToken)));
             await UniTask.SwitchToMainThread();
 #endif
             MarkAsNotFirstEnter();
@@ -151,11 +152,11 @@ namespace XiaoZhi.Unity
                     break;
                 case DeviceState.Starting:
                     _display.SetStatus(Lang.Strings.Get("STATE_STARTING"));
-                    _display.SetEmotion("neutral");
+                    _display.SetEmotion("loading");
                     break;
                 case DeviceState.Activating:
                     _display.SetStatus(Lang.Strings.Get("ACTIVATION"));
-                    _display.SetEmotion("happy");
+                    _display.SetEmotion("activation");
                     break;
                 case DeviceState.WifiConfiguring:
                 case DeviceState.Upgrading:
@@ -460,6 +461,26 @@ namespace XiaoZhi.Unity
 
                 await UniTask.Delay(1000);
             }
+        }
+
+        private async UniTask<bool> CheckRequestPermission()
+        {
+            var success = true;
+            var result = await PermissionManager.RequestPermissions(PermissionType.ReadStorage,
+                PermissionType.WriteStorage, PermissionType.Microphone);
+            foreach (var i in result)
+            {
+                if (i.Granted) continue;
+                var permissionName =
+                    Lang.Strings.Get($"Permission_{Enum.GetName(typeof(PermissionType), i.Type)}");
+                _context.UIManager.ShowNotificationUI(
+                        Lang.Strings.Get(string.Format(Lang.Strings.Get("Permission_Request_Failed"),
+                            permissionName)))
+                    .Forget();
+                success = false;
+            }
+
+            return success;
         }
 
         private bool IsFirstEnter()

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8848475232033438899}
   - component: {fileID: 2312088290890101546}
   - component: {fileID: 3076372747201414895}
-  - component: {fileID: 61410907510098826}
+  - component: {fileID: 5641646939180488911}
   m_Layer: 5
   m_Name: Radio
   m_TagString: Untagged
@@ -87,7 +87,7 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 61410907510098826}
+  m_TargetGraphic: {fileID: 0}
   toggleTransition: 1
   graphic: {fileID: 0}
   m_Group: {fileID: 0}
@@ -109,11 +109,11 @@ MonoBehaviour:
     CircleSelected: {r: 0.827451, g: 0.8901961, b: 0.99215686, a: 1}
     CirclePressed: {r: 0.827451, g: 0.8901961, b: 0.99215686, a: 1}
     CircleDisabled: {r: 1, g: 1, b: 1, a: 1}
-  _bg: {fileID: 61410907510098826}
-  _circle: {fileID: 2793109993940187867}
+  _bg: {fileID: 5641646939180488911}
+  _circle: {fileID: 5337035828259937163}
   _offGraphic: {fileID: 8622612734889474716}
   _onGraphic: {fileID: 8178362658886028967}
---- !u!114 &61410907510098826
+--- !u!114 &5641646939180488911
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -122,7 +122,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1990323792211906804}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 86bfa46edb710064fb60144606c4893b, type: 3}
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
@@ -133,91 +133,16 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_onion: 0
-  m_onionWidth: 10
-  m_antialiasing: -1
-  m_outline: 1
-  m_outlineWidth: 1
-  m_outlineInnerSoftWidth: 0
-  m_outlineInnerSoftness: 0
-  m_outlineColor: {r: 0.17464745, g: 0.18447503, b: 0.17788847, a: 1}
-  m_outlineType: 0
-  m_outlineGradationColor: {r: 0, g: 1, b: 1, a: 1}
-  m_outlineGradationAngle: 0
-  m_outlineGradationRadius: 0.5
-  m_outlineGradationSmooth: 0.5
-  m_outlineGradationRange: {x: 0.25, y: 0.75}
-  m_outlineGradationOffset: {x: 0, y: 0}
-  m_outlineGradationShape: 0
-  m_outlineEffectType: 0
-  m_outlineEffectColor: {r: 1, g: 1, b: 1, a: 1}
-  m_outlineEffectOffset: {x: 0, y: 0}
-  m_outlineEffectAngle: 0
-  m_outlineEffectShinyBlur: 0
-  m_outlineEffectShinyWidth: 0.25
-  m_outlineEffectPatternTexture: {fileID: 0}
-  m_outlineEffectPatternRow: 5
-  m_outlineEffectPatternScroll: 0
-  m_outlineEffectPatternParamsX: 1
-  m_outlineEffectPatternParamsY: 1
-  m_outlineEffectPatternParamsZ: 1
-  m_outlineEffectPatternParamsW: 1
-  m_outlineEffectPatternScale: {x: 1, y: 1}
-  m_shadow: 0
-  m_shadowWidth: 10
-  m_shadowInnerSoftWidth: 0
-  m_shadowSoftness: 0
-  m_shadowDilate: 0
-  m_shadowOffset: {x: 0, y: 4}
-  m_shadowColor: {r: 0, g: 0, b: 0, a: 0.25}
-  m_shadowEffectType: 0
-  m_shadowGradationColor: {r: 0, g: 0, b: 0, a: 1}
-  m_shadowGradationAngle: 0
-  m_shadowGradationRadius: 0.5
-  m_shadowGradationSmooth: 0.5
-  m_shadowGradationRange: {x: 0.25, y: 0.75}
-  m_shadowGradationOffset: {x: 0, y: 0}
-  m_shadowGradationShape: 0
-  m_fillColor: {r: 1, g: 1, b: 1, a: 1}
-  m_activeImageType: 0
-  m_sprite: {fileID: 0}
-  m_texture: {fileID: 0}
-  m_uvRect:
-    serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
-  m_gradationColor: {r: 1, g: 1, b: 1, a: 1}
-  m_gradationAngle: 0
-  m_gradationRadius: 0.5
-  m_gradationSmooth: 0.5
-  m_gradationRange: {x: 0.25, y: 0.75}
-  m_gradationOffset: {x: 0, y: 0}
-  m_gradationShape: 0
-  m_graphicEffectType: 0
-  m_graphicEffectColor: {r: 1, g: 1, b: 1, a: 1}
-  m_graphicEffectOffset: {x: 0, y: 0}
-  m_graphicEffectAngle: 0
-  m_graphicEffectShinyBlur: 0
-  m_graphicEffectShinyWidth: 0.25
-  m_graphicEffectPatternTexture: {fileID: 0}
-  m_graphicEffectPatternRow: 5
-  m_graphicEffectPatternScroll: 0
-  m_graphicEffectPatternParamsX: 1
-  m_graphicEffectPatternParamsY: 1
-  m_graphicEffectPatternParamsZ: 1
-  m_graphicEffectPatternParamsW: 1
-  m_graphicEffectPatternScale: {x: 1, y: 1}
-  m_rainbowSaturation: 1
-  m_rainbowValue: 1
-  m_rainbowHueOffset: 0
-  m_independent: 0
-  m_radius: 50
-  m_radiusX: 40
-  m_radiusY: 40
-  m_radiusZ: 40
-  m_radiusW: 40
+  m_Sprite: {fileID: 21300000, guid: 7ac47ca506c192849a8121b4f656c321, type: 3}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &3355887165943936913
 GameObject:
   m_ObjectHideFlags: 0
@@ -303,7 +228,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3907064771051144849}
   - component: {fileID: 7845982957677021448}
-  - component: {fileID: 2793109993940187867}
+  - component: {fileID: 5337035828259937163}
   m_Layer: 5
   m_Name: Circle
   m_TagString: Untagged
@@ -340,7 +265,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6299334195412937430}
   m_CullTransparentMesh: 0
---- !u!114 &2793109993940187867
+--- !u!114 &5337035828259937163
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -349,7 +274,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 6299334195412937430}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7be79dd369be6684cb25a7553689e0ae, type: 3}
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
@@ -360,87 +285,16 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_onion: 0
-  m_onionWidth: 10
-  m_antialiasing: -1
-  m_outline: 0
-  m_outlineWidth: 1
-  m_outlineInnerSoftWidth: 0
-  m_outlineInnerSoftness: 0
-  m_outlineColor: {r: 0, g: 0, b: 0, a: 1}
-  m_outlineType: 0
-  m_outlineGradationColor: {r: 0, g: 1, b: 1, a: 1}
-  m_outlineGradationAngle: 0
-  m_outlineGradationRadius: 0.5
-  m_outlineGradationSmooth: 0.5
-  m_outlineGradationRange: {x: 0.25, y: 0.75}
-  m_outlineGradationOffset: {x: 0, y: 0}
-  m_outlineGradationShape: 0
-  m_outlineEffectType: 0
-  m_outlineEffectColor: {r: 1, g: 1, b: 1, a: 1}
-  m_outlineEffectOffset: {x: 0, y: 0}
-  m_outlineEffectAngle: 0
-  m_outlineEffectShinyBlur: 0
-  m_outlineEffectShinyWidth: 0.25
-  m_outlineEffectPatternTexture: {fileID: 0}
-  m_outlineEffectPatternRow: 5
-  m_outlineEffectPatternScroll: 0
-  m_outlineEffectPatternParamsX: 1
-  m_outlineEffectPatternParamsY: 1
-  m_outlineEffectPatternParamsZ: 1
-  m_outlineEffectPatternParamsW: 1
-  m_outlineEffectPatternScale: {x: 1, y: 1}
-  m_shadow: 0
-  m_shadowWidth: 10
-  m_shadowInnerSoftWidth: 0
-  m_shadowSoftness: 0
-  m_shadowDilate: 0
-  m_shadowOffset: {x: 0, y: 4}
-  m_shadowColor: {r: 0, g: 0, b: 0, a: 0.25}
-  m_shadowEffectType: 0
-  m_shadowGradationColor: {r: 0, g: 0, b: 0, a: 1}
-  m_shadowGradationAngle: 0
-  m_shadowGradationRadius: 0.5
-  m_shadowGradationSmooth: 0.5
-  m_shadowGradationRange: {x: 0.25, y: 0.75}
-  m_shadowGradationOffset: {x: 0, y: 0}
-  m_shadowGradationShape: 0
-  m_fillColor: {r: 1, g: 1, b: 1, a: 1}
-  m_activeImageType: 0
-  m_sprite: {fileID: 0}
-  m_texture: {fileID: 0}
-  m_uvRect:
-    serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
-  m_gradationColor: {r: 1, g: 1, b: 1, a: 1}
-  m_gradationAngle: 0
-  m_gradationRadius: 0.5
-  m_gradationSmooth: 0.5
-  m_gradationRange: {x: 0.25, y: 0.75}
-  m_gradationOffset: {x: 0, y: 0}
-  m_gradationShape: 0
-  m_graphicEffectType: 0
-  m_graphicEffectColor: {r: 1, g: 1, b: 1, a: 1}
-  m_graphicEffectOffset: {x: 0, y: 0}
-  m_graphicEffectAngle: 0
-  m_graphicEffectShinyBlur: 0
-  m_graphicEffectShinyWidth: 0.25
-  m_graphicEffectPatternTexture: {fileID: 0}
-  m_graphicEffectPatternRow: 5
-  m_graphicEffectPatternScroll: 0
-  m_graphicEffectPatternParamsX: 1
-  m_graphicEffectPatternParamsY: 1
-  m_graphicEffectPatternParamsZ: 1
-  m_graphicEffectPatternParamsW: 1
-  m_graphicEffectPatternScale: {x: 1, y: 1}
-  m_rainbowSaturation: 1
-  m_rainbowValue: 1
-  m_rainbowHueOffset: 0
-  m_min: 0
-  m_max: 1
+  m_Sprite: {fileID: 21300000, guid: 5fb4e7c3d77c0ba48a123a2067ebbe7f, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &8605361573286546233
 GameObject:
   m_ObjectHideFlags: 0

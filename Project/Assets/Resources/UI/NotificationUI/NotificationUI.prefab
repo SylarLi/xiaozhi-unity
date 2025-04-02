@@ -11,10 +11,10 @@ GameObject:
   - component: {fileID: 9215982564785046531}
   - component: {fileID: 8158270543645421587}
   - component: {fileID: 1569936081150628586}
-  - component: {fileID: 831693452686977411}
-  - component: {fileID: 3474687409815097125}
   - component: {fileID: 4790753108333622700}
   - component: {fileID: 4075928350392274733}
+  - component: {fileID: 2662786906610670847}
+  - component: {fileID: 1932553732057744104}
   m_Layer: 5
   m_Name: NotificationUI
   m_TagString: Untagged
@@ -90,130 +90,10 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 831693452686977411}
+  m_TargetGraphic: {fileID: 0}
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &831693452686977411
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5353013733602128948}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 86bfa46edb710064fb60144606c4893b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.105882354, g: 0.105882354, b: 0.105882354, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_onion: 0
-  m_onionWidth: 10
-  m_antialiasing: -1
-  m_outline: 0
-  m_outlineWidth: 1
-  m_outlineInnerSoftWidth: 0
-  m_outlineInnerSoftness: 0
-  m_outlineColor: {r: 0.509434, g: 0.509434, b: 0.509434, a: 1}
-  m_outlineType: 1
-  m_outlineGradationColor: {r: 0, g: 1, b: 1, a: 1}
-  m_outlineGradationAngle: 0
-  m_outlineGradationRadius: 0.5
-  m_outlineGradationSmooth: 0.5
-  m_outlineGradationRange: {x: 0.25, y: 0.75}
-  m_outlineGradationOffset: {x: 0, y: 0}
-  m_outlineGradationShape: 0
-  m_outlineEffectType: 0
-  m_outlineEffectColor: {r: 1, g: 1, b: 1, a: 1}
-  m_outlineEffectOffset: {x: 0, y: 0}
-  m_outlineEffectAngle: 0
-  m_outlineEffectShinyBlur: 0
-  m_outlineEffectShinyWidth: 0.25
-  m_outlineEffectPatternTexture: {fileID: 0}
-  m_outlineEffectPatternRow: 5
-  m_outlineEffectPatternScroll: 0
-  m_outlineEffectPatternParamsX: 1
-  m_outlineEffectPatternParamsY: 1
-  m_outlineEffectPatternParamsZ: 1
-  m_outlineEffectPatternParamsW: 1
-  m_outlineEffectPatternScale: {x: 1, y: 1}
-  m_shadow: 1
-  m_shadowWidth: 16
-  m_shadowInnerSoftWidth: 10
-  m_shadowSoftness: 1
-  m_shadowDilate: 0
-  m_shadowOffset: {x: 0, y: -6}
-  m_shadowColor: {r: 0, g: 0, b: 0, a: 0.627451}
-  m_shadowEffectType: 0
-  m_shadowGradationColor: {r: 0, g: 0, b: 0, a: 1}
-  m_shadowGradationAngle: 0
-  m_shadowGradationRadius: 0.5
-  m_shadowGradationSmooth: 0.5
-  m_shadowGradationRange: {x: 0.25, y: 0.75}
-  m_shadowGradationOffset: {x: 0, y: 0}
-  m_shadowGradationShape: 0
-  m_fillColor: {r: 1, g: 1, b: 1, a: 1}
-  m_activeImageType: 0
-  m_sprite: {fileID: 0}
-  m_texture: {fileID: 0}
-  m_uvRect:
-    serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
-  m_gradationColor: {r: 1, g: 1, b: 1, a: 1}
-  m_gradationAngle: 0
-  m_gradationRadius: 0.5
-  m_gradationSmooth: 0.5
-  m_gradationRange: {x: 0.25, y: 0.75}
-  m_gradationOffset: {x: 0, y: 0}
-  m_gradationShape: 0
-  m_graphicEffectType: 0
-  m_graphicEffectColor: {r: 1, g: 1, b: 1, a: 1}
-  m_graphicEffectOffset: {x: 0, y: 0}
-  m_graphicEffectAngle: 0
-  m_graphicEffectShinyBlur: 0
-  m_graphicEffectShinyWidth: 0.25
-  m_graphicEffectPatternTexture: {fileID: 0}
-  m_graphicEffectPatternRow: 5
-  m_graphicEffectPatternScroll: 0
-  m_graphicEffectPatternParamsX: 1
-  m_graphicEffectPatternParamsY: 1
-  m_graphicEffectPatternParamsZ: 1
-  m_graphicEffectPatternParamsW: 1
-  m_graphicEffectPatternScale: {x: 1, y: 1}
-  m_rainbowSaturation: 1
-  m_rainbowValue: 1
-  m_rainbowHueOffset: 0
-  m_independent: 0
-  m_radius: 16
-  m_radiusX: 40
-  m_radiusY: 40
-  m_radiusZ: 40
-  m_radiusW: 40
---- !u!114 &3474687409815097125
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5353013733602128948}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 194c0269152749669caf6f795219a647, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _background: 0
-  _react: 0
-  _alpha: 1
 --- !u!114 &4790753108333622700
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -243,8 +123,8 @@ MonoBehaviour:
   m_Padding:
     m_Left: 35
     m_Right: 35
-    m_Top: 15
-    m_Bottom: 15
+    m_Top: 31
+    m_Bottom: 31
   m_ChildAlignment: 4
   m_Spacing: 0
   m_ChildForceExpandWidth: 0
@@ -254,6 +134,51 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &2662786906610670847
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5353013733602128948}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.972549, g: 0.98039216, b: 0.99215686, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 248b626528f30994489a5d9e4bad00d7, type: 3}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1932553732057744104
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5353013733602128948}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 194c0269152749669caf6f795219a647, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _background: 0
+  _react: 0
+  _alpha: 1
 --- !u!1 &7829783906911784278
 GameObject:
   m_ObjectHideFlags: 0
@@ -330,8 +255,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4291151812
-  m_fontColor: {r: 0.76862746, g: 0.78039217, b: 0.77254903, a: 1}
+    rgba: 4282795844
+  m_fontColor: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:

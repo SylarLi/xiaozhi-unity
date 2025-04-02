@@ -8,6 +8,7 @@ Project/*.sln
 Project/.idea
 Project/obj
 .vscode
+Builds
 Project/Project.sln.DotSettings.user
 Project/Assets/Plugins/FMOD/Cache
 Project/Assets/Plugins/FMOD/Cache.meta

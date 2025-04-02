@@ -2,7 +2,6 @@
     "ACTIVATION": "激活设备",
     "ERROR": "错误",
     "LOADING_RESOURCES": "加载资源...",
-    "LOADING_PROTOCOL": "加载协议...",
     "LOADING_MODEL": "加载模型...",
     "STATE_STARTING": "启动中",
     "STATE_STANDBY": "待机中",
@@ -15,5 +14,11 @@
     "SettingsUI_Volume":  "音量",
     "SettingsUI_Theme": "主题",
     "SettingsUI_Fill":  "填充",
-    "SettingsUI_Lang":  "语言"
+    "SettingsUI_Lang":  "语言",
+
+    "Permission_ReadStorage": "文件读取", 
+    "Permission_WriteStorage": "文件写入",
+    "Permission_Camera": "相机", 
+    "Permission_Microphone":  "录音",
+    "Permission_Request_Failed": "{0}权限请求失败"
 }

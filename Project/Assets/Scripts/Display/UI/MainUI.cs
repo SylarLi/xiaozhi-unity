@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using TMPro;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace XiaoZhi.Unity
@@ -13,7 +15,8 @@ namespace XiaoZhi.Unity
             { "happy", "😄" },
             { "sad", "🙁" },
             { "neutral", "🙂" },
-            { "thinking", "🤔" }
+            { "thinking", "🤔" },
+            { "activation", "🤖" }
         };
 
         private const int SpectrumUpdateInterval = 50;
@@ -25,6 +28,7 @@ namespace XiaoZhi.Unity
         private Button _btnChat;
         private Button _btnTest;
         private XInputWave _xInputWave;
+        private GameObject _goLoading;
 
         private CancellationTokenSource _cts;
 
@@ -38,6 +42,7 @@ namespace XiaoZhi.Unity
             _textStatus = Tr.Find("Status").GetComponent<TMP_Text>();
             _textChat = Tr.Find("Chat").GetComponent<TMP_Text>();
             _textEmotion = Tr.Find("Emotion").GetComponent<TMP_Text>();
+            _goLoading = Tr.Find("Loading").gameObject;
             _btnSet = Tr.Find("BtnSet").GetComponent<Button>();
             _btnSet.onClick.AddListener(() => { ShowModuleUI<SettingsUI>().Forget(); });
             _xInputWave = Tr.Find("Spectrum").GetComponent<XInputWave>();
@@ -45,7 +50,7 @@ namespace XiaoZhi.Unity
 
         protected override async UniTask OnShow(BaseUIData data = null)
         {
-            SetEmotion("neutral");
+            _textEmotion.text = "";
             _textStatus.text = "";
             _textChat.text = "";
             _cts = new CancellationTokenSource();
@@ -72,11 +77,28 @@ namespace XiaoZhi.Unity
 
         public void SetEmotion(string emotion)
         {
-            _textEmotion.text = Emojis[emotion];
+            switch (emotion)
+            {
+                case "loading":
+                    _goLoading.SetActive(emotion == "loading");
+                    _textEmotion.text = "";                    
+                    break;
+                default:
+                    _goLoading.SetActive(false);
+                    _textEmotion.text = Emojis[emotion];
+                    break;
+            }
+            
         }
 
         public void SetChatMessage(ChatRole role, string content)
         {
+            if (_textEmotion.text == "🤖")
+            {
+                _textChat.text = $"<link=\"{Config.Instance.ActivationURL}\">{content}</link>";
+                return;
+            }
+            
             _textChat.text = content;
         }
 
