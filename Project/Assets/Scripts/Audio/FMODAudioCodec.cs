@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -23,6 +22,7 @@ namespace XiaoZhi.Unity
         private Sound _recorder;
         private Channel _recorderChannel;
         private bool _isRecording;
+        private int _recorderId = -1;
         private int _recorderLength;
         private int _readPosition;
         private Sound _player;
@@ -30,7 +30,6 @@ namespace XiaoZhi.Unity
         private int _playerLength;
         private int _writePosition;
         private float _playEndTime;
-        private int _deviceIndex;
         private Memory<short> _shortBuffer1;
         private Memory<short> _shortBuffer2;
         private DSP _fftDsp;
@@ -53,6 +52,7 @@ namespace XiaoZhi.Unity
             _spectrumAnalyzer = new SpectrumAnalyzer(FFTWindowSize << 1);
             InitAudioProcessor();
             InitPlayer();
+            InitRecorder();
         }
 
         public override void Start()
@@ -122,14 +122,15 @@ namespace XiaoZhi.Unity
         {
             if (!outputEnabled || !_isRecording) return;
             var inputFrameSize = inputSampleRate / 100 * inputChannels;
-            _system.getRecordPosition(_deviceIndex, out var pos);
+            _system.getRecordPosition(_recorderId, out var pos);
             var recorderPos = (int)pos;
             var numFrames = Tools.Repeat(recorderPos - _apsCapturePos, _recorderLength) / inputFrameSize;
             if (numFrames <= 0) return;
             var outputFrameSize = outputSampleRate / 100 * outputChannels;
             _playerChannel.getPosition(out pos, TIMEUNIT.PCM);
             var playerPos = (int)pos;
-            var apsReversePos = Tools.Repeat((playerPos / outputFrameSize - numFrames) * outputFrameSize, _playerLength);
+            var apsReversePos =
+                Tools.Repeat((playerPos / outputFrameSize - numFrames) * outputFrameSize, _playerLength);
             var reverseSamples = numFrames * outputFrameSize;
             var reverseSpan = Tools.EnsureMemory(ref _shortBuffer1, reverseSamples);
             FMODHelper.ReadPCM16(_player, apsReversePos, reverseSpan);
@@ -145,7 +146,7 @@ namespace XiaoZhi.Unity
                     Debug.LogError($"ProcessReverseStream error: {result1}");
                     return;
                 }
-                
+
                 _aps.SetStreamDelayMs(0);
                 var span2 = captureSpan.Slice(i * inputFrameSize, inputFrameSize);
                 var result2 = _aps.ProcessStream(span2, span2);
@@ -271,7 +272,7 @@ namespace XiaoZhi.Unity
         public override bool GetInputSpectrum(out ReadOnlySpan<float> spectrum)
         {
             spectrum = default;
-            if (!inputEnabled) return false;
+            if (!_isRecording || !inputEnabled) return false;
             const int readLen = FFTWindowSize << 1;
             var position = (_inputBuffer.WritePosition / readLen - 1) * readLen;
             if (_lastAnalysisPos == position) return false;
@@ -291,53 +292,31 @@ namespace XiaoZhi.Unity
 
         protected override int Read(Span<short> dest)
         {
-            if (!inputEnabled || !_recorder.hasHandle()) return 0;
+            if (!_isRecording || !inputEnabled || !_recorder.hasHandle()) return 0;
             return _inputBuffer.TryRead(dest) ? dest.Length : 0;
         }
 
-        public override InputDevice[] GetInputDevices()
+        public override bool GetInputDevice(out InputDevice device)
         {
-            var inputDevices = new List<InputDevice>();
             _system.getRecordNumDrivers(out var numDrivers, out _);
             for (var i = 0; i < numDrivers; i++)
             {
                 _system.getRecordDriverInfo(i, out var deviceName, 64, out _, out var systemRate,
                     out var speakerMode, out var speakerModeChannels, out var state);
-                if (state.HasFlag(DRIVER_STATE.CONNECTED))
-                    inputDevices.Add(new InputDevice
+                if (state.HasFlag(DRIVER_STATE.CONNECTED) && state.HasFlag(DRIVER_STATE.DEFAULT))
+                {
+                    device = new InputDevice
                     {
                         Id = i, Name = deviceName, SystemRate = systemRate,
                         SpeakerMode = Enum.GetName(typeof(SPEAKERMODE), speakerMode),
                         SpeakerModeChannels = speakerModeChannels
-                    });
+                    };
+                    return true;
+                }
             }
 
-            return inputDevices.ToArray();
-        }
-
-        public override void SetInputDeviceIndex(int index)
-        {
-            var inputDevices = GetInputDevices();
-            if (inputDevices.Length == 0)
-            {
-                Debug.LogError("没有可用的录音设备");
-                return;
-            }
-            
-            index = Tools.Repeat(index, inputDevices.Length);
-            _system.getRecordDriverInfo(index, out var deviceName, 64, out _, out _, out _,
-                out _, out var state);
-            if (!state.HasFlag(DRIVER_STATE.CONNECTED))
-            {
-                Debug.LogError($"录音设备不可用: {deviceName}");
-                return;
-            }
-
-            StopRecorder();
-            ClearRecorder();
-            base.SetInputDeviceIndex(index);
-            InitRecorder();
-            if (inputEnabled) StartRecorder();
+            device = default;
+            return false;
         }
 
         private void InitRecorder()
@@ -373,10 +352,18 @@ namespace XiaoZhi.Unity
         private void StartRecorder()
         {
             if (!_recorder.hasHandle()) return;
-            _system.isRecording(_deviceIndex, out var isRecording);
-            if (!isRecording)
+            var recorderId = -1;
+            if (GetInputDevice(out var inputDevice)) recorderId = inputDevice.Id;
+            if (_isRecording && _recorderId != recorderId)
             {
-                _system.recordStart(_deviceIndex, _recorder, true);
+                _system.recordStop(_recorderId);
+                _isRecording = false;
+            }
+            
+            _recorderId = recorderId;
+            if (!_isRecording && _recorderId >= 0)
+            {
+                _system.recordStart(_recorderId, _recorder, true);
                 _isRecording = true;
             }
         }
@@ -384,10 +371,10 @@ namespace XiaoZhi.Unity
         private void StopRecorder()
         {
             if (!_recorder.hasHandle()) return;
-            _system.isRecording(_deviceIndex, out var isRecording);
-            if (isRecording)
+            if (_recorderId < 0) return;
+            if (_isRecording)
             {
-                _system.recordStop(_deviceIndex);
+                _system.recordStop(_recorderId);
                 _isRecording = false;
             }
         }

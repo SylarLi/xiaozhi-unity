@@ -10,6 +10,7 @@
     "STATE_LISTENING": "Listening",
     "STATE_SPEAKING": "Speaking",
     "STATE_ERROR": "Error",
+    "MIC_NOT_FOUND_TIPS": "Microphone not found.",
 
     "SettingsUI_Title": "Settings",
     "SettingsUI_Microphone": "Microphone",

@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.U2D;
-using UnityEngine.UI;
 
 namespace XiaoZhi.Unity
 {
@@ -13,16 +10,12 @@ namespace XiaoZhi.Unity
         private static ThemeSettings _settings;
         private static Dictionary<ThemeSettings.Theme, Dictionary<ThemeSettings.Background, Color>> _background;
         private static Dictionary<ThemeSettings.Theme, Dictionary<ThemeSettings.Action, Color>> _action;
-        private static Dictionary<bool, SpriteAtlas> _atlas;
-        private static bool _fill;
-        public static bool Fill => _fill;
         private static ThemeSettings.Theme _theme = ThemeSettings.Theme.Light;
         public static ThemeSettings.Theme Theme => _theme;
 
-        public static UnityEvent<bool> OnFillChanged = new();
         public static UnityEvent<ThemeSettings.Theme> OnThemeChanged = new();
 
-        private static Settings _prefSettings = new("theme");
+        private static readonly Settings PrefSettings = new("theme");
 
         static ThemeManager()
         {
@@ -59,19 +52,8 @@ namespace XiaoZhi.Unity
                     _action[i.Theme].Add(i.Action, i.Color);
                 }
             }
-
-            _atlas = new Dictionary<bool, SpriteAtlas>();
-            if (_settings.AtlasSettings != null)
-            {
-                foreach (var i in _settings.AtlasSettings)
-                {
-                    if (!_atlas.ContainsKey(i.Fill))
-                        _atlas.Add(i.Fill, i.Atlas);
-                }
-            }
-
-            _theme = (ThemeSettings.Theme)_prefSettings.GetInt("theme", (int)_settings.DefaultTheme);
-            _fill = _prefSettings.GetInt("fill", _settings.DefaultFill ? 1 : 0) == 1;
+            
+            _theme = (ThemeSettings.Theme)PrefSettings.GetInt("theme", (int)_settings.DefaultTheme);
         }
 
         public static void SetTheme(ThemeSettings.Theme theme)
@@ -79,29 +61,11 @@ namespace XiaoZhi.Unity
             if (_theme != theme)
             {
                 _theme = theme;
-                _prefSettings.SetInt("theme", (int)_theme);
-                _prefSettings.Save();
+                PrefSettings.SetInt("theme", (int)_theme);
+                PrefSettings.Save();
                 OnThemeChanged?.Invoke(theme);
                 Canvas.ForceUpdateCanvases();
             }
-        }
-
-        public static void SetFill(bool fill)
-        {
-            if (_fill != fill)
-            {
-                _fill = fill;
-                _prefSettings.SetInt("fill", _fill ? 1 : 0);
-                _prefSettings.Save();
-                OnFillChanged?.Invoke(fill);
-            }
-        }
-
-        public static Sprite FetchSprite(string spriteName, bool fill)
-        {
-            // var atlas = _atlas[fill];
-            // return atlas?.GetSprite(spriteName);
-            return null;
         }
 
         public static Color FetchColor(ThemeSettings.Theme theme,
@@ -118,9 +82,9 @@ namespace XiaoZhi.Unity
                     var color = backgroundColor + overlayColor;
                     color.a = backgroundColor.a * overlayColor.a;
                     return color;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(theme), theme, null);
             }
-
-            throw new NotImplementedException();
         }
 
         public static Color ColorDiv(Color color, Color divisor)

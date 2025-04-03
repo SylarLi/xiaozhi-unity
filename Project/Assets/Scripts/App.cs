@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.iOS;
 using Debug = UnityEngine.Debug;
 
 namespace XiaoZhi.Unity
@@ -66,7 +65,7 @@ namespace XiaoZhi.Unity
                 return;
             }
 
-            if (!await CheckNewVersion())
+            if (!await CheckNewVersion(_cts.Token))
             {
                 SetDeviceState(DeviceState.Error);
                 _display.SetChatMessage(ChatRole.System, Lang.Strings.Get("ACTIVATION_FAILED_TIPS"));
@@ -84,6 +83,13 @@ namespace XiaoZhi.Unity
             }
 
             InitializeAudio();
+            if (!_codec.GetInputDevice(out _))
+            {
+                SetDeviceState(DeviceState.Error);
+                _display.SetChatMessage(ChatRole.System, Lang.Strings.Get("MIC_NOT_FOUND_TIPS"));
+                return;    
+            }
+            
             InitializeProtocol();
             SetDeviceState(DeviceState.Idle);
             UniTask.Void(MainLoop, _cts.Token);
@@ -442,7 +448,7 @@ namespace XiaoZhi.Unity
             _protocol.Start();
         }
 
-        private async UniTask<bool> CheckNewVersion()
+        private async UniTask<bool> CheckNewVersion(CancellationToken cancellationToken = default)
         {
             var success = false;
             var macAddr = Config.GetMacAddress();
@@ -482,7 +488,7 @@ namespace XiaoZhi.Unity
                     }
                 }
 
-                await UniTask.Delay(3 * 1000);
+                await UniTask.Delay(3 * 1000, cancellationToken: cancellationToken);
             }
             
             return success;

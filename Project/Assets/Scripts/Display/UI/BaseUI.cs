@@ -99,7 +99,9 @@ namespace XiaoZhi.Unity
         protected void SetLang(Transform tr, string path, string key)
         {
             if (!tr) return;
-            var text = (!string.IsNullOrEmpty(path) ? tr.Find(path) : tr).GetComponent<TextMeshProUGUI>();
+            tr = !string.IsNullOrEmpty(path) ? tr.Find(path) : tr;
+            if (!tr) return;
+            var text = tr.GetComponent<TextMeshProUGUI>();
             if (!text) return;
             text.text = Lang.Strings.Get(key);
         }

@@ -10,6 +10,7 @@
     "STATE_LISTENING": "聆听中",
     "STATE_SPEAKING": "说话中",
     "STATE_ERROR": "错误",
+    "MIC_NOT_FOUND_TIPS": "麦克风未找到。",
 
     "SettingsUI_Title": "设置",
     "SettingsUI_Microphone": "麦克风",

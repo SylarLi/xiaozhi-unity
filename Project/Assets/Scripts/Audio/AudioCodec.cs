@@ -5,8 +5,6 @@ namespace XiaoZhi.Unity
 {
     public abstract class AudioCodec : IDisposable
     {
-        public const int InputFrameSizeMs = 30;
-        
         public struct InputDevice
         {
             public string Name;
@@ -15,6 +13,8 @@ namespace XiaoZhi.Unity
             public string SpeakerMode;
             public int SpeakerModeChannels;
         }
+        
+        public const int InputFrameSizeMs = 30;
 
         protected bool inputEnabled;
 
@@ -35,10 +35,6 @@ namespace XiaoZhi.Unity
         protected int outputVolume = 70;
 
         public int OutputVolume => outputVolume;
-
-        protected int inputDeviceIndex;
-
-        public int InputDeviceIndex => inputDeviceIndex;
         
         private Settings _settings;
 
@@ -48,7 +44,6 @@ namespace XiaoZhi.Unity
         {
             _settings = new Settings("audio");
             outputVolume = _settings.GetInt("output_volume", outputVolume);
-            SetInputDeviceIndex(0);
             EnableInput(true);
             EnableOutput(true);
         }
@@ -86,15 +81,10 @@ namespace XiaoZhi.Unity
         protected abstract int Write(ReadOnlySpan<short> data);
         
         // --------------------------- input ---------------------------- //
+        
+        public abstract bool GetInputDevice(out InputDevice device);
 
         public abstract bool GetInputSpectrum(out ReadOnlySpan<float> spectrum);
-        
-        public abstract InputDevice[] GetInputDevices();
-        
-        public virtual void SetInputDeviceIndex(int index)
-        {
-            inputDeviceIndex = index;
-        }
 
         public virtual void EnableInput(bool enable)
         {

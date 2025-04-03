@@ -67,23 +67,11 @@ namespace XiaoZhi.Unity
 
             public Color Color;
         }
-
-        [Serializable]
-        public struct AtlasSetting
-        {
-            public bool Fill;
-            
-            public SpriteAtlas Atlas;
-        }
-
+        
         public SpotSetting[] SpotSettings;
 
         public ActionSetting[] ActionSettings;
         
-        public AtlasSetting[] AtlasSettings;
-
         public Theme DefaultTheme;
-
-        public bool DefaultFill;
     }
 }
