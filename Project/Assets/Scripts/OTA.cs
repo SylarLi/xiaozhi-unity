@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using System.Collections.Generic;
@@ -53,14 +54,23 @@ namespace XiaoZhi.Unity
             webRequest.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(_postData));
             webRequest.uploadHandler.contentType = "application/json";
             webRequest.downloadHandler = new DownloadHandlerBuffer();
-            await webRequest.SendWebRequest();
+            webRequest.timeout = 5;
+            try
+            {
+                await webRequest.SendWebRequest();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e);
+            }
+
             if (webRequest.result != UnityWebRequest.Result.Success)
             {
                 Debug.LogError($"UnityWebRequest Error: {webRequest.error}");
                 webRequest.Dispose();
                 return false;
             }
-            
+
             var jsonResponse = webRequest.downloadHandler.text;
             webRequest.Dispose();
             Debug.Log("ota response: " + jsonResponse);

@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace XiaoZhi.Unity
 {
@@ -36,6 +37,7 @@ namespace XiaoZhi.Unity
                 if (_isVoiceDetected != value)
                 {
                     _isVoiceDetected = value;
+                    Debug.Log($"vad: {_isVoiceDetected}");
                     RaiseVadStateChanged(_isVoiceDetected);
                 }
             }
@@ -45,6 +47,10 @@ namespace XiaoZhi.Unity
         {
             OnVadStateChanged?.Invoke(speaking);
         }
+
+        public abstract int ReadVadBuffer(ref Memory<short> buffer);
+        
+        public abstract void ClearVadBuffer();
 
         public virtual void Dispose()
         {

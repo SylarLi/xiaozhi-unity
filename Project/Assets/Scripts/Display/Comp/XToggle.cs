@@ -1,3 +1,4 @@
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -5,13 +6,7 @@ namespace XiaoZhi.Unity
 {
     public class XToggle : Toggle
     {
-        private ColourModifier[] _colourModifiers;
-
-        private ColourModifier[] GetColourModifiers()
-        {
-            _colourModifiers ??= GetComponentsInChildren<ColourModifier>(true);
-            return _colourModifiers;
-        }
+        [SerializeField] private ColourModifier[] _reactModifiers;
         
         protected override void OnEnable()
         {
@@ -58,15 +53,18 @@ namespace XiaoZhi.Unity
 
         private void UpdateBackground()
         {
+            if (_reactModifiers == null) return;
             var background = isOn ? ThemeSettings.Background.SpotThin : ThemeSettings.Background.Stateful;
-            foreach (var modifier in GetColourModifiers())
-                modifier.SetBackground(background);
+            foreach (var modifier in _reactModifiers)
+                if (modifier)
+                    modifier.SetBackground(background);
         }
 
         private void UpdateColor()
         {
-            foreach (var modifier in GetColourModifiers())
-                modifier.SetAction(GetCurrentAction());
+            if (_reactModifiers == null) return;
+            foreach (var modifier in _reactModifiers)
+                if (modifier) modifier.SetAction(GetCurrentAction());
         }
 
         private ThemeSettings.Action GetCurrentAction()

@@ -1,9 +1,9 @@
 {
     "ACTIVATION": "Activate Device",
-    "ACTIVATION_CODE_COPIED": "Activation code copied. Click the link below to activate the device.",
+    "ACTIVATION_CODE_COPIED": "Activation code copied. Click the link below to activate your device.",
     "ACTIVATION_FAILED_TIPS": "Activation failed. Please try restarting the application.",
-    "LOADING_RESOURCES": "Loading Resources...",
-    "LOADING_MODEL": "Loading Model...",
+    "LOADING_RESOURCES": "Loading resources...",
+    "LOADING_MODEL": "Loading model...",
     "STATE_STARTING": "Starting",
     "STATE_STANDBY": "Standby",
     "STATE_CONNECTING": "Connecting",
@@ -13,17 +13,21 @@
     "MIC_NOT_FOUND_TIPS": "Microphone not found.",
 
     "SettingsUI_Title": "Settings",
+    "SettingsUI_BreakMode": "Break Mode",
+    "SettingsUI_BreakMode_None": "Off",
+    "SettingsUI_BreakMode_Keyword": "Keyword",
+    "SettingsUI_BreakMode_VAD": "Voice",
     "SettingsUI_Microphone": "Microphone",
     "SettingsUI_Volume": "Volume",
     "SettingsUI_Theme": "Theme",
     "SettingsUI_Fill": "Fill",
     "SettingsUI_Lang": "Language",
-    "SettingsUI_Lang_Change_Tips": "Language changed successfully. Please restart to take effect.",
+    "SettingsUI_Lang_Change_Tips": "Language changed successfully. Restarting in 3 seconds.",
 
-    "Permission_ReadStorage": "Storage Read",
-    "Permission_WriteStorage": "Storage Write",
+    "Permission_ReadStorage": "File Read",
+    "Permission_WriteStorage": "File Write",
     "Permission_Camera": "Camera",
     "Permission_Microphone": "Microphone",
-    "Permission_One_Request_Failed": "{0} Permission request failed.",
+    "Permission_One_Request_Failed": "{0} permission request failed.",
     "Permission_Request_Failed": "Permission request failed. Please try restarting the application."
 }

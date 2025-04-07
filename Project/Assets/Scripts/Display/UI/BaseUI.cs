@@ -54,7 +54,7 @@ namespace XiaoZhi.Unity
         public async UniTask Hide()
         {
             await OnHide();
-            Go.SetActive(false);
+            if (Go) Go.SetActive(false);
             IsVisible = false;
         }
 
@@ -90,33 +90,33 @@ namespace XiaoZhi.Unity
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void SetLang(Transform tr, string key)
+        protected void SetLang(Transform tr, string key, params object[] args)
         {
-            SetLang(tr, null, key);
+            SetLang(tr, null, key, args);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void SetLang(Transform tr, string path, string key)
+        protected void SetLang(Transform tr, string path, string key, params object[] args)
         {
             if (!tr) return;
             tr = !string.IsNullOrEmpty(path) ? tr.Find(path) : tr;
             if (!tr) return;
             var text = tr.GetComponent<TextMeshProUGUI>();
             if (!text) return;
-            text.text = Lang.Strings.Get(key);
+            text.text = Lang.Strings.Get(key, args);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void SetLang(Component comp, string key)
+        protected void SetLang(Component comp, string key, params object[] args)
         {
-            SetLang(comp, null, key);
+            SetLang(comp, null, key, args);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void SetLang(Component comp, string path, string key)
+        protected void SetLang(Component comp, string path, string key, params object[] args)
         {
             if (!comp) return;
-            SetLang(comp.transform, path, key);
+            SetLang(comp.transform, path, key, args);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -129,6 +129,26 @@ namespace XiaoZhi.Unity
         protected T GetComponent<T>(Transform tr) where T : Component
         {
             return !tr ? null : tr.GetComponent<T>();
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected T GetComponent<T>(Component comp, string path) where T : Component
+        {
+            var tr = comp?.transform;
+            return GetComponent<T>(tr, path);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected T GetComponent<T>(Component comp) where T : Component
+        {
+            var tr = comp?.transform;
+            return GetComponent<T>(tr);
+        }
+
+        protected GameObject GetGo(Transform tr, string path)
+        {
+            tr = !tr ? null : tr.Find(path);
+            return tr ? tr.gameObject : null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -166,6 +186,16 @@ namespace XiaoZhi.Unity
         public T FindUI<T>(string alias) where T : BaseUI
         {
             return _uiService.FindUI<T>(alias);
+        }
+
+        public bool IsUIVisible<T>() where T : BaseUI
+        {
+            return _uiService.IsUIVisible<T>();
+        }
+
+        public bool IsUIVisible(string alias)
+        {
+            return _uiService.IsUIVisible(alias);
         }
 
         public async UniTask<T> ShowSceneUI<T>(BaseUIData data = null) where T : BaseUI, new()

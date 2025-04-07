@@ -59,7 +59,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.7607843, g: 0.90588236, b: 1, a: 1}
+  m_Color: {r: 0, g: 0.26666668, b: 0.43529412, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -89,7 +89,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 3
-  _react: 0
   _alpha: 1
 --- !u!1 &1485116606879470002
 GameObject:
@@ -168,7 +167,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294834936
-  m_fontColor: {r: 0.972549, g: 0.98039216, b: 0.99215686, a: 1}
+  m_fontColor: {r: 0.105882354, g: 0.105882354, b: 0.105882354, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -240,7 +239,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 0
-  _react: 0
   _alpha: 1
 --- !u!1 &1681592721096929016
 GameObject:
@@ -375,6 +373,8 @@ MonoBehaviour:
   _value: {fileID: 5136537183640846764}
   _from: {fileID: 4141686781897986931}
   _to: {fileID: 513688087874658849}
+  _reactModifiers:
+  - {fileID: 4728684519884916329}
 --- !u!1 &2836161578281851606
 GameObject:
   m_ObjectHideFlags: 0
@@ -435,7 +435,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.043137256, g: 0.34117648, b: 0.8156863, a: 1}
+  m_Color: {r: 0.65882355, g: 0.78039217, b: 0.98039216, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -465,7 +465,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 4
-  _react: 0
   _alpha: 1
 --- !u!1 &3279858130787878137
 GameObject:
@@ -543,8 +542,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4282795844
-  m_fontColor: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
+    rgba: 4291151812
+  m_fontColor: {r: 0.76862746, g: 0.78039217, b: 0.77254903, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -616,7 +615,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 1
-  _react: 0
   _alpha: 1
 --- !u!1 &4188583288155652326
 GameObject:
@@ -678,7 +676,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.043137256, g: 0.34117648, b: 0.8156863, a: 1}
+  m_Color: {r: 0.65882355, g: 0.78039217, b: 0.98039216, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -708,7 +706,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 4
-  _react: 1
   _alpha: 1
 --- !u!1 &4586955624042300528
 GameObject:
@@ -769,7 +766,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.043137256, g: 0.34117648, b: 0.8156863, a: 1}
+  m_Color: {r: 0.65882355, g: 0.78039217, b: 0.98039216, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -799,7 +796,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 4
-  _react: 0
   _alpha: 1
 --- !u!1 &4694452814951393045
 GameObject:
@@ -877,8 +873,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4282795844
-  m_fontColor: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
+    rgba: 4291151812
+  m_fontColor: {r: 0.76862746, g: 0.78039217, b: 0.77254903, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -950,7 +946,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 1
-  _react: 0
   _alpha: 1
 --- !u!1 &6741617373848268398
 GameObject:
@@ -1011,7 +1006,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.76862746, g: 0.78039217, b: 0.77254903, a: 1}
+  m_Color: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1041,7 +1036,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 5
-  _react: 0
   _alpha: 1
 --- !u!1 &7111775748326314500
 GameObject:
@@ -1102,7 +1096,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.76862746, g: 0.78039217, b: 0.77254903, a: 1}
+  m_Color: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1132,7 +1126,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 5
-  _react: 0
   _alpha: 1
 --- !u!1 &8474816983738597736
 GameObject:

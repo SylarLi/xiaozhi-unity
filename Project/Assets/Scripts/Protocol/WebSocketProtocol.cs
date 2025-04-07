@@ -38,10 +38,9 @@ namespace XiaoZhi.Unity
 
         public override async UniTask<bool> OpenAudioChannel()
         {
-            var config = Config.Instance;
-            var url = config.WebSocketUrl;
-            var token = config.WebSocketAccessToken;
-            var deviceId = Config.GetMacAddress();
+            var url = AppSettings.Instance.GetWebSocketUrl();
+            var token = AppSettings.Instance.GetWebSocketAccessToken();
+            var deviceId = AppSettings.Instance.GetMacAddress();
             var clientId = Config.GetUUid();
             Debug.Log($"url: {url}");
             Debug.Log($"token: {token}");
@@ -80,7 +79,7 @@ namespace XiaoZhi.Unity
                     format = "opus",
                     sample_rate = 16000,
                     channels = 1,
-                    frame_duration = config.OpusFrameDurationMs
+                    frame_duration = Config.Instance.OpusFrameDurationMs
                 }
             };
             await SendJson(helloMessage);

@@ -12,10 +12,9 @@ namespace XiaoZhi.Unity
 {
     public class FMODAudioCodec : AudioCodec
     {
-        private const int InputBufferSec = 8;
         private const int RecorderBufferSec = 2;
+        private const int InputBufferSec = 8;
         private const int PlayerBufferSec = 8;
-        private const int FFTWindowSize = 512;
 
         private CancellationTokenSource _updateCts;
         private FMOD.System _system;
@@ -34,9 +33,10 @@ namespace XiaoZhi.Unity
         private Memory<short> _shortBuffer2;
         private DSP _fftDsp;
         private Memory<float> _floatBuffer;
-        private RingBuffer<short> _inputBuffer;
-        private SpectrumAnalyzer _spectrumAnalyzer;
-        private int _lastAnalysisPos;
+        private readonly RingBuffer<short> _inputBuffer;
+        private readonly SpectrumAnalyzer _spectrumAnalyzer;
+        private int _lastInputAnalysisPos;
+        private int _lastOutputAnalysisPos;
 
         private FMODAudioProcessor _aps;
         private int _apsCapturePos;
@@ -49,7 +49,7 @@ namespace XiaoZhi.Unity
             this.outputChannels = outputChannels;
             _system = RuntimeManager.CoreSystem;
             _inputBuffer = new RingBuffer<short>(inputSampleRate * inputChannels * InputBufferSec);
-            _spectrumAnalyzer = new SpectrumAnalyzer(FFTWindowSize << 1);
+            _spectrumAnalyzer = new SpectrumAnalyzer(SpectrumWindowSize);
             InitAudioProcessor();
             InitPlayer();
             InitRecorder();
@@ -162,26 +162,46 @@ namespace XiaoZhi.Unity
         }
 
         // -------------------------------- output ------------------------------- //
-
-        public override bool GetOutputSpectrum(out ReadOnlySpan<float> spectrum)
+        
+        public override bool GetOutputSpectrum(bool fft, out ReadOnlySpan<float> spectrum)
         {
-            if (!outputEnabled || !_fftDsp.hasHandle())
+            if (!outputEnabled || (fft && !_fftDsp.hasHandle()))
             {
                 spectrum = default;
                 return false;
             }
 
-            _fftDsp.getParameterData((int)DSP_FFT.SPECTRUMDATA, out var unmanagedData, out _);
-            var fftData = Marshal.PtrToStructure<DSP_PARAMETER_FFT>(unmanagedData);
-            if (fftData.numchannels <= 0)
+            if (fft)
+            {
+                _fftDsp.getParameterData((int)DSP_FFT.SPECTRUMDATA, out var unmanagedData, out _);
+                var fftData = Marshal.PtrToStructure<DSP_PARAMETER_FFT>(unmanagedData);
+                if (fftData.numchannels <= 0)
+                {
+                    spectrum = default;
+                    return false;
+                }
+
+                var floatSpan = Tools.EnsureMemory(ref _floatBuffer, fftData.length);
+                fftData.getSpectrum(0, floatSpan);
+                spectrum = floatSpan;
+            }
+            else
             {
                 spectrum = default;
-                return false;
+                const int readLen = SpectrumWindowSize;
+                _playerChannel.getPosition(out var pos, TIMEUNIT.PCM);
+                var playerPos = (int)pos;
+                var position = (playerPos / readLen - 1) * readLen;
+                position = Math.Max(position, 0);
+                if (_lastOutputAnalysisPos == position) return false;
+                _lastOutputAnalysisPos = position;
+                var shortSpan = Tools.EnsureMemory(ref _shortBuffer1, readLen);
+                FMODHelper.ReadPCM16(_player, _lastOutputAnalysisPos, shortSpan);
+                var floatSpan = Tools.EnsureMemory(ref _floatBuffer, shortSpan.Length);
+                Tools.PCM16Short2Float(shortSpan, floatSpan);
+                spectrum = floatSpan;
             }
-
-            var floatSpan = Tools.EnsureMemory(ref _floatBuffer, fftData.length);
-            fftData.getSpectrum(0, floatSpan);
-            spectrum = floatSpan;
+            
             return true;
         }
 
@@ -240,7 +260,7 @@ namespace XiaoZhi.Unity
             _playerChannel.setMute(true);
             system.createDSPByType(DSP_TYPE.FFT, out _fftDsp);
             _fftDsp.setParameterInt((int)DSP_FFT.WINDOW, (int)DSP_FFT_WINDOW_TYPE.HANNING);
-            _fftDsp.setParameterInt((int)DSP_FFT.WINDOWSIZE, FFTWindowSize << 1);
+            _fftDsp.setParameterInt((int)DSP_FFT.WINDOWSIZE, SpectrumWindowSize);
             _playerChannel.addDSP(CHANNELCONTROL_DSP_INDEX.HEAD, _fftDsp);
         }
 
@@ -269,17 +289,27 @@ namespace XiaoZhi.Unity
 
         // -------------------------------- input ------------------------------- //
 
-        public override bool GetInputSpectrum(out ReadOnlySpan<float> spectrum)
+        public override bool GetInputSpectrum(bool fft, out ReadOnlySpan<float> spectrum)
         {
             spectrum = default;
             if (!_isRecording || !inputEnabled) return false;
-            const int readLen = FFTWindowSize << 1;
+            const int readLen = SpectrumWindowSize;
             var position = (_inputBuffer.WritePosition / readLen - 1) * readLen;
-            if (_lastAnalysisPos == position) return false;
-            _lastAnalysisPos = position;
+            position = Math.Max(position, 0);
+            if (_lastInputAnalysisPos == position) return false;
+            _lastInputAnalysisPos = position;
             var shortSpan = Tools.EnsureMemory(ref _shortBuffer1, readLen);
-            return _inputBuffer.TryReadAt(position, shortSpan) &&
-                   _spectrumAnalyzer.Analyze(shortSpan, out spectrum);
+            var success = _inputBuffer.TryReadAt(_lastInputAnalysisPos, shortSpan);
+            if (!success) return false;
+            if (!fft)
+            {
+                var floatSpan = Tools.EnsureMemory(ref _floatBuffer, shortSpan.Length);
+                Tools.PCM16Short2Float(shortSpan, floatSpan);
+                spectrum = floatSpan;
+                return true;
+            }
+            
+            return _spectrumAnalyzer.Analyze(shortSpan, out spectrum);
         }
 
         public override void EnableInput(bool enable)

@@ -34,8 +34,8 @@ namespace XiaoZhi.Unity
                 if (data.Length > _capacity - _count)
                     return false;
                 var writeCount = Math.Min(data.Length, _capacity - _writePosition);
-                data.Slice(0, writeCount).CopyTo(_buffer.Span.Slice(_writePosition));
-                if (writeCount < data.Length) data.Slice(writeCount).CopyTo(_buffer.Span.Slice(0));
+                data[..writeCount].CopyTo(_buffer.Span[_writePosition..]);
+                if (writeCount < data.Length) data[writeCount..].CopyTo(_buffer.Span);
                 _writePosition = (_writePosition + data.Length) % _capacity;
                 _count += data.Length;
                 return true;   
@@ -52,7 +52,7 @@ namespace XiaoZhi.Unity
                 var firstRead = Math.Min(readCount, _capacity - _readPosition);
                 _buffer.Span.Slice(_readPosition, firstRead).CopyTo(destination);
                 if (firstRead < readCount)
-                    _buffer.Span.Slice(0, readCount - firstRead).CopyTo(destination.Slice(firstRead));
+                    _buffer.Span[..(readCount - firstRead)].CopyTo(destination[firstRead..]);
                 _readPosition = (_readPosition + readCount) % _capacity;
                 _count -= readCount;
                 return true;
@@ -70,7 +70,7 @@ namespace XiaoZhi.Unity
                 var firstRead = Math.Min(readCount, _capacity - position);
                 _buffer.Span.Slice(position, firstRead).CopyTo(destination);
                 if (firstRead < readCount)
-                    _buffer.Span.Slice(0, readCount - firstRead).CopyTo(destination.Slice(firstRead));
+                    _buffer.Span[..(readCount - firstRead)].CopyTo(destination[firstRead..]);
                 return true;
             }
         }

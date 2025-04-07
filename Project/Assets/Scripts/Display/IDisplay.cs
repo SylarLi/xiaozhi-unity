@@ -1,11 +1,18 @@
+using System;
+using Cysharp.Threading.Tasks;
+
 namespace XiaoZhi.Unity
 {
-    public interface IDisplay
+    public interface IDisplay : IDisposable
     {
-        public void SetStatus(string status);
-        
-        public void SetEmotion(string emotion);
+        UniTask<bool> Load();
 
-        public void SetChatMessage(ChatRole role, string content);
+        void Start();
+        
+        void SetStatus(string status);
+        
+        void SetEmotion(string emotion);
+
+        void SetChatMessage(ChatRole role, string content);
     }
 }

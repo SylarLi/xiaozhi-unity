@@ -15,6 +15,8 @@ namespace XiaoZhi.Unity
         }
         
         public const int InputFrameSizeMs = 30;
+        
+        public const int SpectrumWindowSize = 1024;
 
         protected bool inputEnabled;
 
@@ -32,7 +34,7 @@ namespace XiaoZhi.Unity
         protected int outputSampleRate = 0;
         public int OutputSampleRate => outputSampleRate;
 
-        protected int outputVolume = 70;
+        protected int outputVolume = 50;
 
         public int OutputVolume => outputVolume;
         
@@ -42,8 +44,6 @@ namespace XiaoZhi.Unity
         
         public virtual void Start()
         {
-            _settings = new Settings("audio");
-            outputVolume = _settings.GetInt("output_volume", outputVolume);
             EnableInput(true);
             EnableOutput(true);
         }
@@ -52,13 +52,11 @@ namespace XiaoZhi.Unity
         
         // --------------------------- output ---------------------------- //
         
-        public abstract bool GetOutputSpectrum(out ReadOnlySpan<float> spectrum);
+        public abstract bool GetOutputSpectrum(bool fft, out ReadOnlySpan<float> spectrum);
         
         public virtual void SetOutputVolume(int volume)
         {
             outputVolume = volume;
-            _settings.SetInt("output_volume", outputVolume);
-            _settings.Save();
         }
 
         public virtual void EnableOutput(bool enable)
@@ -84,7 +82,7 @@ namespace XiaoZhi.Unity
         
         public abstract bool GetInputDevice(out InputDevice device);
 
-        public abstract bool GetInputSpectrum(out ReadOnlySpan<float> spectrum);
+        public abstract bool GetInputSpectrum(bool fft, out ReadOnlySpan<float> spectrum);
 
         public virtual void EnableInput(bool enable)
         {

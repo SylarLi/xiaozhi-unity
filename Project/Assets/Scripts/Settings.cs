@@ -4,7 +4,7 @@ namespace XiaoZhi.Unity
 {
     public class Settings
     {
-        private string _namespace;
+        private readonly string _namespace;
 
         public Settings(string ns)
         {

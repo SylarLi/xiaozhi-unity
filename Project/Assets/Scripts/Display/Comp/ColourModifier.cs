@@ -10,8 +10,6 @@ namespace XiaoZhi.Unity
     {
         [SerializeField] private ThemeSettings.Background _background;
         
-        [SerializeField] private bool _react;
-        
         [SerializeField][Range(0, 1)] private float _alpha = 1.0f;
 
         private Graphic _graphic;
@@ -66,14 +64,12 @@ namespace XiaoZhi.Unity
         
         public void SetBackground(ThemeSettings.Background background)
         {
-            if (!_react) return;
             _background = background;
             UpdateColor();
         }
 
         public void SetAction(ThemeSettings.Action action)
         {
-            if (!_react) return;
             _action = action;
             UpdateColor();
         }

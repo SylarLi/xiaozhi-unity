@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
@@ -204,7 +205,7 @@ namespace XiaoZhi.Unity
             await request.SendWebRequest();
             if (request.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
                 return false;
-            await File.WriteAllBytesAsync(targetPath, request.downloadHandler.data, cancellationToken);
+            await WriteAllBytesAsync(targetPath, request.downloadHandler.data, cancellationToken);
             return true;
         }
 
@@ -244,6 +245,30 @@ namespace XiaoZhi.Unity
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteAllText(string relativePath, string content)
+        {
+            File.WriteAllText(GetFullPath(FileType.DataPath, relativePath), content);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static async UniTask WriteAllTextAsync(string relativePath, string content, CancellationToken cancellationToken = default)
+        {
+            await File.WriteAllTextAsync(GetFullPath(FileType.DataPath, relativePath), content, cancellationToken);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteAllBytes(string relativePath, byte[] bytes)
+        {
+            File.WriteAllBytes(GetFullPath(FileType.DataPath, relativePath), bytes);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static async UniTask WriteAllBytesAsync(string relativePath, byte[] bytes, CancellationToken cancellationToken = default)
+        {
+            await File.WriteAllBytesAsync(GetFullPath(FileType.DataPath, relativePath), bytes, cancellationToken);
         }
     }
 }

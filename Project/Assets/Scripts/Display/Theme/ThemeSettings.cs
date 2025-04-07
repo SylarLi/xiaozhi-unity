@@ -45,7 +45,8 @@ namespace XiaoZhi.Unity
             SpotThin,
             SpotStrong,
             Neutral,
-            Title
+            Title,
+            TextField,
         }
 
         [Serializable]

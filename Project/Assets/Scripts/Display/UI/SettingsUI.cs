@@ -9,12 +9,21 @@ namespace XiaoZhi.Unity
 {
     public class SettingsUI : BaseUI
     {
+        private TMP_InputField _inputOTAUrl;
+        private TMP_InputField _inputWebSocketUrl;
+        private TMP_InputField _inputWebSocketAccessToken;
+        private TMP_InputField _inputCustomMacAddress;
+        private Transform _listDisplayMode;
+        private Transform _listBreakMode;
+        private GameObject _goKeywords;
+        private TMP_InputField _inputKeywords;
         private XSlider _sliderVolume;
         private XButton _btnTheme;
-        private XRadio _radioFill;
+        private XRadio _radioAutoHide;
         private XSpriteChanger _iconVolume;
         private XSpriteChanger _iconTheme;
         private Transform _listLang;
+        private XButton _btnRestart;
 
         public override string GetResourcePath()
         {
@@ -24,13 +33,27 @@ namespace XiaoZhi.Unity
         protected override void OnInit()
         {
             var content = Tr.Find("Viewport/Content");
+            _inputOTAUrl = GetComponent<TMP_InputField>(content, "OTAUrl/InputField");
+            _inputOTAUrl.onDeselect.AddListener(OnChangeOTAUrl);
+            _inputWebSocketUrl = GetComponent<TMP_InputField>(content, "WebSocketUrl/InputField");
+            _inputWebSocketUrl.onDeselect.AddListener(OnChangeWebSocketUrl);
+            _inputWebSocketAccessToken = GetComponent<TMP_InputField>(content, "WebSocketAccessToken/InputField");
+            _inputWebSocketAccessToken.onDeselect.AddListener(OnChangeWebSocketAccessToken);
+            _inputCustomMacAddress = GetComponent<TMP_InputField>(content, "CustomMacAddress/InputField");
+            _inputCustomMacAddress.onDeselect.AddListener(OnChangeCustomMacAddress);
+            _listDisplayMode = content.Find("DisplayMode/List");
+            _listBreakMode = content.Find("BreakMode/List");
+            _inputKeywords = GetComponent<TMP_InputField>(content, "Keywords/InputField");
+            _inputKeywords.onDeselect.AddListener(OnChangeKeywords);
             _sliderVolume = GetComponent<XSlider>(content, "Volume/Slider");
             _iconVolume = GetComponent<XSpriteChanger>(content, "Volume/Title/Icon");
             _sliderVolume.onValueChanged.AddListener(value =>
             {
-                Context.App.GetCodec().SetOutputVolume((int)value);
+                AppSettings.Instance.SetOutputVolume((int)value);
                 UpdateIconVolume();
             });
+            _radioAutoHide = GetComponent<XRadio>(content, "AutoHide/Radio");
+            _radioAutoHide.onValueChanged.AddListener(value => { AppSettings.Instance.SetAutoHideUI(value); });
             _btnTheme = GetComponent<XButton>(content, "Theme/Button");
             _btnTheme.onClick.AddListener(() =>
             {
@@ -41,20 +64,51 @@ namespace XiaoZhi.Unity
             });
             _iconTheme = GetComponent<XSpriteChanger>(content, "Theme/Button/Icon");
             _listLang = content.Find("Lang/List");
+            _btnRestart = GetComponent<XButton>(content, "Restart/Button");
+            _btnRestart.onClick.AddListener(() => { Context.Restart().Forget(); });
 
             GetComponent<XButton>(content, "Top/BtnClose").onClick.AddListener(() => Close().Forget());
             SetLang(content, "Title/Text", "SettingsUI_Title");
+            SetLang(content, "OTAUrl/Title/Text", "SettingsUI_OTAUrl");
+            SetLang(content, "OTAUrl/InputField/Text Area/Placeholder", "SettingsUI_Placeholder",
+                Lang.Strings.Get("SettingsUI_OTAUrl"));
+            SetLang(content, "WebSocketUrl/Title/Text", "SettingsUI_WebSocketUrl");
+            SetLang(content, "WebSocketUrl/InputField/Text Area/Placeholder", "SettingsUI_Placeholder",
+                Lang.Strings.Get("SettingsUI_WebSocketUrl"));
+            SetLang(content, "WebSocketAccessToken/Title/Text", "SettingsUI_WebSocketAccessToken");
+            SetLang(content, "WebSocketAccessToken/InputField/Text Area/Placeholder", "SettingsUI_Placeholder",
+                Lang.Strings.Get("SettingsUI_WebSocketAccessToken"));
+            SetLang(content, "CustomMacAddress/Title/Text", "SettingsUI_CustomMacAddress");
+            SetLang(content, "CustomMacAddress/InputField/Text Area/Placeholder", "SettingsUI_Placeholder",
+                Lang.Strings.Get("SettingsUI_CustomMacAddress"));
+            SetLang(content, "DisplayMode/Title/Text", "SettingsUI_DisplayMode");
+            SetLang(content, "BreakMode/Title/Text", "SettingsUI_BreakMode");
+            SetLang(content, "Keywords/Title/Text", "SettingsUI_Keywords");
+            SetLang(content, "Keywords/InputField/Text Area/Placeholder", "SettingsUI_Placeholder",
+                Lang.Strings.Get("SettingsUI_Keywords"));
+            SetLang(content, "Keywords/Tips_Help/Text", "SettingsUI_Keywords_Help");
             SetLang(content, "Volume/Title/Text", "SettingsUI_Volume");
+            SetLang(content, "AutoHide/Title/Text", "SettingsUI_AutoHide");
             SetLang(content, "Theme/Title/Text", "SettingsUI_Theme");
             SetLang(content, "Lang/Title/Text", "SettingsUI_Lang");
+            SetLang(content, "Restart/Button/Text", "SettingsUI_Restart");
         }
 
         protected override async UniTask OnShow(BaseUIData data = null)
         {
+            UpdateOTAUrl();
+            UpdateWebSocketUrl();
+            UpdateWebSocketAccessToken();
+            UpdateCustomMacAddress();
+            UpdateDisplayMode();
+            UpdateBreakMode();
+            UpdateKeywords();
+            UpdateVolume();
             UpdateIconVolume();
+            UpdateAutoHide();
             UpdateIconTheme();
             UpdateLangList();
-            
+
             Tr.DOKill();
             await Tr.SetAnchorPosX(Tr.rect.width + 16).DOAnchorPosX(0, AnimationDuration).SetEase(Ease.InOutSine);
         }
@@ -65,9 +119,76 @@ namespace XiaoZhi.Unity
             await Tr.DOAnchorPosX(Tr.rect.width + 16, AnimationDuration).SetEase(Ease.InOutSine);
         }
 
+        private void UpdateDisplayMode()
+        {
+            var values = Enum.GetValues(typeof(DisplayMode));
+            Tools.EnsureChildren(_listDisplayMode, values.Length);
+            for (var i = 0; i < values.Length; i++)
+            {
+                var go = _listDisplayMode.GetChild(i).gameObject;
+                go.SetActive(true);
+                GetComponent<TextMeshProUGUI>(go.transform, "Text").text =
+                    Lang.Strings.Get($"SettingsUI_DisplayMode_{Enum.GetName(typeof(DisplayMode), i)}");
+                var toggle = go.GetComponent<XToggle>();
+                RemoveUniqueListener(toggle);
+                toggle.isOn = (DisplayMode)values.GetValue(i) == AppSettings.Instance.GetDisplayMode();
+                AddUniqueListener(toggle, i, OnToggleDisplayMode);
+            }
+        }
+
+        private void OnToggleDisplayMode(Toggle toggle, int index, bool isOn)
+        {
+            if (isOn)
+            {
+                var displayMode = (DisplayMode)Enum.GetValues(typeof(DisplayMode)).GetValue(index);
+                if (AppSettings.Instance.GetDisplayMode() == displayMode) return;
+                AppSettings.Instance.SetDisplayMode(displayMode);
+                ShowNotificationUI(Lang.Strings.Get("SettingsUI_Modify_Tips")).Forget();
+            }
+        }
+
+        private void UpdateBreakMode()
+        {
+            var values = Enum.GetValues(typeof(BreakMode));
+            Tools.EnsureChildren(_listBreakMode, values.Length);
+            for (var i = 0; i < values.Length; i++)
+            {
+                var go = _listBreakMode.GetChild(i).gameObject;
+                go.SetActive(true);
+                GetComponent<TextMeshProUGUI>(go.transform, "Text").text =
+                    Lang.Strings.Get($"SettingsUI_BreakMode_{Enum.GetName(typeof(BreakMode), i)}");
+                var toggle = go.GetComponent<XToggle>();
+                RemoveUniqueListener(toggle);
+                toggle.isOn = (BreakMode)values.GetValue(i) == AppSettings.Instance.GetBreakMode();
+                AddUniqueListener(toggle, i, OnToggleBreakMode);
+            }
+        }
+
+        private void OnToggleBreakMode(Toggle toggle, int index, bool isOn)
+        {
+            if (isOn) AppSettings.Instance.SetBreakMode((BreakMode)Enum.GetValues(typeof(BreakMode)).GetValue(index));
+        }
+
+        private void UpdateKeywords()
+        {
+            _inputKeywords.text = AppSettings.Instance.GetKeywords();
+        }
+
+        private void OnChangeKeywords(string text)
+        {
+            if (AppSettings.Instance.GetKeywords().Equals(text)) return;
+            AppSettings.Instance.SetKeywords(text);
+            ShowNotificationUI(Lang.Strings.Get("SettingsUI_Modify_Tips")).Forget();
+        }
+
+        private void UpdateVolume()
+        {
+            _sliderVolume.value = AppSettings.Instance.GetOutputVolume();
+        }
+
         private void UpdateIconVolume()
         {
-            var volume = Context.App.GetCodec().OutputVolume;
+            var volume = AppSettings.Instance.GetOutputVolume();
             var index = volume switch
             {
                 0 => 0,
@@ -75,6 +196,11 @@ namespace XiaoZhi.Unity
                 _ => 2
             };
             _iconVolume.ChangeTo(index);
+        }
+
+        private void UpdateAutoHide()
+        {
+            _radioAutoHide.isOn = AppSettings.Instance.IsAutoHideUI();
         }
 
         private void UpdateIconTheme()
@@ -94,7 +220,7 @@ namespace XiaoZhi.Unity
                 go.transform.Find("Text").GetComponent<TextMeshProUGUI>().text = Lang.GetLangName(code);
                 var toggle = go.GetComponent<XToggle>();
                 RemoveUniqueListener(toggle);
-                toggle.isOn = code == Lang.GetLangCode();
+                toggle.isOn = code == AppSettings.Instance.GetLangCode();
                 AddUniqueListener(toggle, i, OnToggleLang);
             }
         }
@@ -103,9 +229,70 @@ namespace XiaoZhi.Unity
         {
             if (isOn)
             {
-                Lang.SetLangCode((Lang.Code)index);
-                ShowNotificationUI(Lang.Strings.Get("SettingsUI_Lang_Change_Tips")).Forget();
+                AppSettings.Instance.SetLangCode((Lang.Code)index);
+                ShowNotificationUI(Lang.Strings.Get("SettingsUI_Modify_Tips")).Forget();
             }
+        }
+
+        private void UpdateCustomMacAddress()
+        {
+            _inputCustomMacAddress.text = AppSettings.Instance.GetMacAddress();
+        }
+
+        private void OnChangeCustomMacAddress(string value)
+        {
+            if (!Tools.IsValidMacAddress(value))
+            {
+                ShowNotificationUI(Lang.Strings.Get("SettingsUI_Invalid_MacAddress_Tips")).Forget();
+                UpdateCustomMacAddress();
+                return;
+            }
+
+            AppSettings.Instance.SetMacAddress(value);
+        }
+
+        private void UpdateWebSocketAccessToken()
+        {
+            _inputWebSocketAccessToken.text = AppSettings.Instance.GetWebSocketAccessToken();
+        }
+
+        private void OnChangeWebSocketAccessToken(string value)
+        {
+            AppSettings.Instance.SetWebSocketAccessToken(value);
+        }
+
+        private void UpdateWebSocketUrl()
+        {
+            _inputWebSocketUrl.text = AppSettings.Instance.GetWebSocketUrl();
+        }
+
+        private void OnChangeWebSocketUrl(string value)
+        {
+            if (!Tools.IsValidUrl(value))
+            {
+                ShowNotificationUI(Lang.Strings.Get("SettingsUI_Invalid_Url_Tips")).Forget();
+                UpdateWebSocketUrl();
+                return;
+            }
+
+            AppSettings.Instance.SetWebSocketUrl(value);
+        }
+
+        private void UpdateOTAUrl()
+        {
+            _inputOTAUrl.text = AppSettings.Instance.GetOTAUrl();
+        }
+
+        private void OnChangeOTAUrl(string value)
+        {
+            if (!Tools.IsValidUrl(value))
+            {
+                ShowNotificationUI(Lang.Strings.Get("SettingsUI_Invalid_Url_Tips")).Forget();
+                UpdateOTAUrl();
+                return;
+            }
+
+            AppSettings.Instance.SetOTAUrl(value);
         }
     }
 }

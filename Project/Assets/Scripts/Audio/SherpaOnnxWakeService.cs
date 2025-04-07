@@ -9,12 +9,15 @@ namespace XiaoZhi.Unity
     public class SherpaOnnxWakeService : WakeService
     {
         private bool _isRunning;
+        public override bool IsRunning => _isRunning;
+
         private KeywordSpotterConfig _kwsConfig;
         private KeywordSpotter _kws;
         private OnlineStream _stream;
         private CancellationTokenSource _loopCts;
         private VadModelConfig _vadConfig;
         private VoiceActivityDetector _vad;
+        private Memory<short> _vadBuffer;
 
         public override void Initialize(int sampleRate)
         {
@@ -37,10 +40,12 @@ namespace XiaoZhi.Unity
             _kwsConfig.ModelConfig.NumThreads = Config.Instance.KeyWordSpotterModelConfigNumThreads;
             _kwsConfig.ModelConfig.Debug = 0;
             _kwsConfig.KeywordsFile =
-                FileUtility.GetFullPath(resourceType, Config.Instance.KeyWordSpotterKeyWordsFile);
-            _vadConfig = new VadModelConfig();
+                FileUtility.GetFullPath(FileUtility.FileType.DataPath, Config.Instance.KeyWordSpotterKeyWordsFile);
+            _vadConfig = new VadModelConfig
+            {
+                SampleRate = sampleRate
+            };
             _vadConfig.SileroVad.Model = FileUtility.GetFullPath(resourceType, Config.Instance.VadModelConfig);
-            _vadConfig.SileroVad.MaxSpeechDuration = 4;
             _vadConfig.Debug = 0;
         }
 
@@ -50,7 +55,8 @@ namespace XiaoZhi.Unity
             _isRunning = true;
             _kws = new KeywordSpotter(_kwsConfig);
             _stream = _kws.CreateStream();
-            _vad = new VoiceActivityDetector(_vadConfig, 4);
+            const float bufferSizeInSec = 2.0f;
+            _vad = new VoiceActivityDetector(_vadConfig, bufferSizeInSec);
             _loopCts = new CancellationTokenSource();
             UniTask.Void(LoopUpdate, _loopCts.Token);
         }
@@ -93,8 +99,6 @@ namespace XiaoZhi.Unity
             ArrayPool<float>.Shared.Return(floatPcm);
         }
 
-        public override bool IsRunning => _isRunning;
-
         private async UniTaskVoid LoopUpdate(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
@@ -114,6 +118,35 @@ namespace XiaoZhi.Unity
 
                 await UniTask.Delay(100, DelayType.Realtime, PlayerLoopTiming.Update, token);
             }
+        }
+
+        public override int ReadVadBuffer(ref Memory<short> buffer)
+        {
+            _vad.Flush();
+            var buffLen = 0;
+            while (!_vad.IsEmpty())
+            {
+                var samples = _vad.Front().Samples;
+                Tools.EnsureMemory(ref buffer, buffLen + samples.Length);
+                Tools.PCM16Float2Short(samples, buffer.Span[buffLen..]);
+                buffLen += samples.Length;
+                _vad.Pop();
+            }
+
+            buffLen = Tools.Trim(buffer.Span[..buffLen], 64);
+            if (buffLen < _vadConfig.SileroVad.MinSpeechDuration * _vadConfig.SampleRate)
+            {
+                ClearVadBuffer();
+                return 0;
+            }
+            
+            return buffLen;
+        }
+
+        public override void ClearVadBuffer()
+        {
+            _vad.Clear();
+            _vad.Reset();
         }
     }
 }

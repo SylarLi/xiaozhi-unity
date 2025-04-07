@@ -8,9 +8,9 @@ namespace XiaoZhi.Unity
         private const int MaxOpusPacketSize = 1500;
 
         private IntPtr _encoder;
-        private RingBuffer<short> _inBuffer;
-        private Memory<short> _frameBuffer;
-        private Memory<byte> _outBuffer;
+        private readonly RingBuffer<short> _inBuffer;
+        private readonly Memory<short> _frameBuffer;
+        private readonly Memory<byte> _outBuffer;
         private readonly int _frameSize;
 
         public OpusEncoder(int sampleRate, int channels, int durationMs)

@@ -10,6 +10,10 @@ namespace XiaoZhi.Unity
         T FindUI<T>() where T : BaseUI;
 
         T FindUI<T>(string alias) where T : BaseUI;
+        
+        bool IsUIVisible<T>() where T : BaseUI;
+        
+        bool IsUIVisible(string alias);
 
         UniTask<T> ShowSceneUI<T>(BaseUIData data = null) where T : BaseUI, new();
 

@@ -76,8 +76,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4282795844
-  m_fontColor: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
+    rgba: 4291151812
+  m_fontColor: {r: 0.76862746, g: 0.78039217, b: 0.77254903, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -149,7 +149,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 1
-  _react: 0
   _alpha: 1
 --- !u!1 &7279954676559442458
 GameObject:
@@ -164,6 +163,7 @@ GameObject:
   - component: {fileID: 1941512379479261530}
   - component: {fileID: 4352425015027109688}
   - component: {fileID: 6933534064144848294}
+  - component: {fileID: 3100569881416658489}
   m_Layer: 5
   m_Name: BG
   m_TagString: Untagged
@@ -211,7 +211,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.972549, g: 0.98039216, b: 0.99215686, a: 1}
+  m_Color: {r: 0.105882354, g: 0.105882354, b: 0.105882354, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -241,7 +241,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 0
-  _react: 0
   _alpha: 1
 --- !u!114 &6933534064144848294
 MonoBehaviour:
@@ -263,6 +262,21 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &3100569881416658489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7279954676559442458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_EffectColor: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
+  m_EffectDistance: {x: 1, y: -1}
+  m_UseGraphicAlpha: 1
 --- !u!1 &8070462140366929018
 GameObject:
   m_ObjectHideFlags: 0
@@ -357,6 +371,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+  _reactModifiers:
+  - {fileID: 4352425015027109688}
 --- !u!114 &1123894986364232448
 MonoBehaviour:
   m_ObjectHideFlags: 0

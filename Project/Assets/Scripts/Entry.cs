@@ -10,16 +10,11 @@ public class Entry : MonoBehaviour
     {
         _context = new Context();
         _context.Init();
-        _context.App.Start().Forget();
+        _context.Start();
     }
 
     private void OnApplicationQuit()
     {
         _context.Dispose();
-    }
-
-    private void OnApplicationFocus(bool hasFocus)
-    {
-        
     }
 }

@@ -135,6 +135,17 @@ namespace XiaoZhi.Unity
             return _uiMap.TryGetValue(alias, value: out var instance) ? instance as T : null;
         }
 
+        public bool IsUIVisible<T>() where T : BaseUI
+        {
+            return IsUIVisible(typeof(T).Name);
+        }
+
+        public bool IsUIVisible(string alias)
+        {
+            var ui = FindUI(alias);
+            return ui is { IsVisible: true };
+        }
+
         public BaseUI FindUI(string alias)
         {
             return _uiMap.GetValueOrDefault(alias);
@@ -322,14 +333,12 @@ namespace XiaoZhi.Unity
             _uiMap.Remove(ui.GetType().Name);
             ui.Destroy();
         }
-
-
+        
         public void Dispose()
         {
             _stack.Clear();
             _notificationQueue.Clear();
-            foreach (var ui in _uiMap.Values)
-                ui.Destroy();
+            UniTask.WhenAll(_uiMap.Values.ToArray().Select(DestroyUI)).Forget();
             _uiMap.Clear();
         }
 

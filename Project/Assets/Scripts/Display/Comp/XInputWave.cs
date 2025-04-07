@@ -14,7 +14,7 @@ namespace XiaoZhi.Unity
         
         public bool UpdateSpectrumData(AudioCodec codec)
         {
-            if (!codec.GetInputSpectrum(out var spectrumData))
+            if (!codec.GetInputSpectrum(true, out var spectrumData))
                 return false;
             var sourceSpectrumSize = spectrumData.Length;
             for (var i = 0; i < _normalizeddBData.Length; i++)
@@ -29,7 +29,7 @@ namespace XiaoZhi.Unity
                     count++;
                 }
 
-                var value = count > 0 ? Linear2dB(sum / count) : 0;
+                var value = count > 0 ? Tools.Linear2dB(sum / count) : 0;
                 _normalizeddBData[i] = Mathf.Lerp(_normalizeddBData[i], value, 0.5f);
             }
 
@@ -92,11 +92,6 @@ namespace XiaoZhi.Unity
                 vh.AddTriangle(vertexIndex, vertexIndex + 1, vertexIndex + 2);
                 vh.AddTriangle(vertexIndex, vertexIndex + 2, vertexIndex + 3);
             }
-        }
-
-        private float Linear2dB(float linear)
-        {
-            return (Mathf.Clamp(Mathf.Log10(linear) * 20.0f, -80.0f, 0.0f) + 80) / 80;
         }
     }
 }

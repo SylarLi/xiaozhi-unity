@@ -11,13 +11,15 @@ namespace XiaoZhi.Unity
     {
         public static Config Instance { get; private set; }
 
-        public static async UniTask LoadConfig()
+        public static async UniTask Load()
         {
             const string configPath = "config.json";
             if (!FileUtility.FileExists(FileUtility.FileType.StreamingAssets, configPath))
                 throw new InvalidDataException("配置文件不存在：" + configPath);
             var jsonContent = await FileUtility.ReadAllTextAsync(FileUtility.FileType.StreamingAssets, configPath);
             Instance = JsonConvert.DeserializeObject<Config>(jsonContent);
+            _uuid = null;
+            _macAddress = null;
         }
 
         public static string BuildOtaPostData(string macAddress, string boardName)
@@ -32,7 +34,7 @@ namespace XiaoZhi.Unity
         }
 
         private static string _uuid;
-        
+
         private static string _macAddress;
 
         public static string GetUUid()
@@ -40,7 +42,7 @@ namespace XiaoZhi.Unity
             _uuid ??= Guid.NewGuid().ToString("d");
             return _uuid;
         }
-        
+
         public static string GetMacAddress()
         {
             _macAddress ??= BuildMacAddress();
@@ -49,8 +51,6 @@ namespace XiaoZhi.Unity
 
         private static string BuildMacAddress()
         {
-            if (!string.IsNullOrEmpty(Instance.CustomMacAddress))
-                return Instance.CustomMacAddress;
 #if UNITY_ANDROID && !UNITY_EDITOR
             using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
             using (var currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
@@ -80,7 +80,7 @@ namespace XiaoZhi.Unity
                 var bytes = adapter.GetPhysicalAddress().GetAddressBytes();
                 return string.Join(":", bytes.Select(b => b.ToString("x2")));
             }
-            
+
             return string.Empty;
 #endif
         }
@@ -100,11 +100,6 @@ namespace XiaoZhi.Unity
             return Application.isMobilePlatform;
         }
         
-        [JsonProperty("LANG_CODE")]
-        public string LangCode { get; private set; }
-
-        [JsonProperty("CUSTOM_MAC_ADDRESS")] public string CustomMacAddress { get; private set; }
-
         [JsonProperty("WEBSOCKET_URL")] public string WebSocketUrl { get; private set; }
 
         [JsonProperty("WEBSOCKET_ACCESS_TOKEN")]
@@ -118,11 +113,11 @@ namespace XiaoZhi.Unity
 
         [JsonProperty("AUDIO_OUTPUT_SAMPLE_RATE")]
         public int AudioOutputSampleRate { get; private set; }
-        
+
         [JsonProperty("SERVER_INPUT_SAMPLE_RATE")]
         public int ServerInputSampleRate { get; private set; }
 
-        [JsonProperty("USE_WAKE_WORD_DETECT")] public bool UseWakeWordDetect { get; private set; }
+        [JsonProperty("ENABLE_WAKE_SERVICE")] public bool EnableWakeService { get; private set; }
 
         [JsonProperty("OTA_VERSION_URL")] public string OtaVersionUrl { get; private set; }
 
@@ -137,17 +132,17 @@ namespace XiaoZhi.Unity
 
         [JsonProperty("KEYWORD_SPOTTER_MODEL_CONFIG_TOKEN")]
         public string KeyWordSpotterModelConfigToken { get; private set; }
-        
+
         [JsonProperty("KEYWORD_SPOTTER_MODEL_CONFIG_NUM_THREADS")]
         public int KeyWordSpotterModelConfigNumThreads { get; private set; }
 
         [JsonProperty("KEYWORD_SPOTTER_KEYWORDS_FILE")]
         public string KeyWordSpotterKeyWordsFile { get; private set; }
-        
-        [JsonProperty("VAD_MODEL_CONFIG")]
-        public string VadModelConfig { get; private set; }
 
-        [JsonProperty("ACTIVATION_URL")]
-        public string ActivationURL { get; private set; }
+        [JsonProperty("VAD_MODEL_CONFIG")] public string VadModelConfig { get; private set; }
+
+        [JsonProperty("ACTIVATION_URL")] public string ActivationURL { get; private set; }
+        
+        [JsonProperty("CHARACTER_NAME")] public string CharacterName { get; private set; }
     }
 }

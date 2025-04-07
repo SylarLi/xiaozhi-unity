@@ -89,6 +89,11 @@ PrefabInstance:
       propertyPath: m_RaycastTarget
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3517182357006002095, guid: ffbdac3af381d3a44ab46fbb710106f4,
+        type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4282795844
+      objectReference: {fileID: 0}
     - target: {fileID: 3789450701495663439, guid: ffbdac3af381d3a44ab46fbb710106f4,
         type: 3}
       propertyPath: m_Pivot.x
@@ -199,7 +204,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: Button_Text_Round_Shadow
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 3100569881416658489, guid: ffbdac3af381d3a44ab46fbb710106f4, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

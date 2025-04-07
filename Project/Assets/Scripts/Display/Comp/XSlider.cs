@@ -12,13 +12,7 @@ namespace XiaoZhi.Unity
         [SerializeField] private TextMeshProUGUI _from;
         [SerializeField] private TextMeshProUGUI _to;
 
-        private ColourModifier[] _colourModifiers;
-
-        private ColourModifier[] GetColourModifiers()
-        {
-            _colourModifiers ??= GetComponentsInChildren<ColourModifier>(true);
-            return _colourModifiers;
-        }
+        [SerializeField] private ColourModifier[] _reactModifiers;
 
         protected override void OnEnable()
         {
@@ -62,8 +56,9 @@ namespace XiaoZhi.Unity
 
         private void UpdateColor()
         {
-            foreach (var modifier in GetColourModifiers())
-                modifier.SetAction(GetCurrentAction());
+            if (_reactModifiers == null) return;
+            foreach (var modifier in _reactModifiers)
+                if (modifier) modifier.SetAction(GetCurrentAction());
         }
 
         private ThemeSettings.Action GetCurrentAction()

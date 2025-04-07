@@ -97,6 +97,8 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+  _reactModifiers:
+  - {fileID: 320520868761906870}
 --- !u!1 &2689619911545959351
 GameObject:
   m_ObjectHideFlags: 0
@@ -184,10 +186,11 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 0}
+  m_TargetGraphic: {fileID: 2590860465256967307}
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+  _reactModifiers: []
 --- !u!114 &2590860465256967307
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -201,7 +204,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.76862746, g: 0.78039217, b: 0.77254903, a: 1}
+  m_Color: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -231,7 +234,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 5
-  _react: 1
   _alpha: 1
 --- !u!1 &3304958329470030028
 GameObject:
@@ -292,14 +294,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.76862746, g: 0.78039217, b: 0.77254903, a: 1}
+  m_Color: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 9da1ac0a493be664eada46935a95883b, type: 3}
+  m_Sprite: {fileID: 21300000, guid: d688e09e8c6bd694f9247a8f2c0567bc, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -322,7 +324,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 5
-  _react: 1
   _alpha: 1
 --- !u!1 &4003540947263697305
 GameObject:
@@ -447,10 +448,11 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 0}
+  m_TargetGraphic: {fileID: 6763968480329474314}
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+  _reactModifiers: []
 --- !u!114 &6763968480329474314
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -464,7 +466,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.76862746, g: 0.78039217, b: 0.77254903, a: 1}
+  m_Color: {r: 0.26666668, g: 0.2784314, b: 0.27450982, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -494,5 +496,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _background: 5
-  _react: 1
   _alpha: 1

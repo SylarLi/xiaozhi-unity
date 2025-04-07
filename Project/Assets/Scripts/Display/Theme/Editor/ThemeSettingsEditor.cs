@@ -76,33 +76,8 @@ namespace XiaoZhi.Unity
             }
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Atlas Settings", EditorStyles.boldLabel);
-            for (int i = 0; i < atlasSettingsProperty.arraySize; i++)
-            {
-                SerializedProperty element = atlasSettingsProperty.GetArrayElementAtIndex(i);
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.PropertyField(element.FindPropertyRelative("Fill"), GUIContent.none);
-                EditorGUILayout.PropertyField(element.FindPropertyRelative("Atlas"), GUIContent.none);
-                if (GUILayout.Button("-", GUILayout.Width(20)))
-                {
-                    atlasSettingsProperty.DeleteArrayElementAtIndex(i);
-                    break;
-                }
-
-                EditorGUILayout.EndHorizontal();
-            }
-
-            if (GUILayout.Button("Add Atlas Setting"))
-            {
-                atlasSettingsProperty.arraySize++;
-            }
-
-            EditorGUILayout.Space();
             EditorGUILayout.LabelField("Default Theme", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(defaultThemeProperty);
-            EditorGUILayout.LabelField("Default Fill", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(defaultFillProperty);
-
             
             EditorGUILayout.Space();
             EditorGUILayout.BeginHorizontal();
