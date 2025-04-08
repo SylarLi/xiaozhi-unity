@@ -2,12 +2,10 @@
 
 基于虾哥的[xiaozhi-esp32](https://github.com/78/xiaozhi-esp32)项目的Unity版本。
 
-<table>
-<tr>
-<td style="padding-right: 20px"><img src="{{ site.url }}/Doc/Emoji.gif" alt="Emoji"></td>
-<td><img src="{{ site.url }}/Doc/VRM.gif" alt="VRM"></td>
-</tr>
-</table>
+<div style="display: flex; justify-content: space-between;">
+  <img src="Docs/Emoji.gif" width="360" />
+  <img src="Docs/VRM.gif" width="360" />
+</div>
 
 ## 主要功能
 
