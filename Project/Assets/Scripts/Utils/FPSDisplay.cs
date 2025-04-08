@@ -4,6 +4,7 @@ namespace XiaoZhi.Unity
 {
     public class FPSDisplay : MonoBehaviour
     {
+#if UNITY_EDITOR
         private const float UpdateInterval = 0.5f; // 更新FPS的时间间隔
         private float _accum; // FPS累积
         private int _frames; // 帧数
@@ -43,5 +44,6 @@ namespace XiaoZhi.Unity
         {
             GUI.Label(new Rect(Screen.width - 150, Screen.height - 40, 140, 30), $"FPS: {_currentFPS:F1}", _style);
         }
+#endif
     }
 }
