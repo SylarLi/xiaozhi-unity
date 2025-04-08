@@ -2,7 +2,12 @@
 
 基于虾哥的[xiaozhi-esp32](https://github.com/78/xiaozhi-esp32)项目的Unity版本。
 
-![Emoji](Doc/Emoji.gif)![VRM](Doc/VRM.gif)
+<table>
+<tr>
+<td style="padding-right: 20px"><img src="Doc/Emoji.gif" alt="Emoji"></td>
+<td><img src="Doc/VRM.gif" alt="VRM"></td>
+</tr>
+</table>
 
 ## 主要功能
 
