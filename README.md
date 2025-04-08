@@ -2,9 +2,7 @@
 
 基于虾哥的[xiaozhi-esp32](https://github.com/78/xiaozhi-esp32)项目的Unity版本。
 
-![Emoji](Doc/1.gif)
-
-![VRM](Doc/2.gif)
+![Emoji](Doc/Emoji.gif)![VRM](Doc/VRM.gif)
 
 ## 主要功能
 
@@ -41,4 +39,4 @@
 - [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
 - [uLipSync](https://github.com/hecomi/uLipSync)
 - [UniVRM](https://github.com/vrm-c/UniVRM)
-- [模型来源](https://hub.vroid.com/en/characters/1245908975744054638/models/2140572620978697176)
+- [模型资源](https://hub.vroid.com/en/characters/1245908975744054638/models/2140572620978697176)
