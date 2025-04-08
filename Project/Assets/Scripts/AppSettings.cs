@@ -15,6 +15,8 @@ namespace XiaoZhi.Unity
         
         private DisplayMode _displayMode;
 
+        private int _vrmModel;
+
         private BreakMode _breakMode;
 
         private bool _autoHideUI;
@@ -24,9 +26,7 @@ namespace XiaoZhi.Unity
         private int _outputVolume;
 
         private Lang.Code _langCode;
-
-        private string _otaUrl;
-
+        
         private string _webSocketUrl;
 
         private string _webSocketAccessToken;
@@ -43,6 +43,7 @@ namespace XiaoZhi.Unity
             _autoHideUI = GetInt("auto_hide_ui") == 1;
             _outputVolume = GetInt("output_volume", 50);
             _langCode = Enum.Parse<Lang.Code>(GetString("lang_code", Enum.GetName(typeof(Lang.Code), Lang.Code.CN)));
+            _vrmModel = GetInt("vrm_model");
         }
         
         public DisplayMode GetDisplayMode() => _displayMode;
@@ -52,6 +53,16 @@ namespace XiaoZhi.Unity
             if (_displayMode == displayMode) return;
             _displayMode = displayMode;
             SetInt("display_mode", (int)displayMode);
+            Save();
+        }
+        
+        public int GetVRMModel() => _vrmModel;
+        
+        public void SetVRMModel(int vrmModel)
+        {
+            if (_vrmModel == vrmModel) return;
+            _vrmModel = vrmModel;
+            SetInt("vrm_model", _vrmModel);
             Save();
         }
 
@@ -125,20 +136,6 @@ namespace XiaoZhi.Unity
         public void MarkAsNotFirstEnter()
         {
             SetInt("i_have_played_with_xiaozhi", 1);
-            Save();
-        }
-
-        public string GetOTAUrl()
-        {
-            _otaUrl ??= GetString("ota_url", Config.Instance.OtaVersionUrl);
-            return _otaUrl;
-        }
-
-        public void SetOTAUrl(string url)
-        {
-            if (_otaUrl.Equals(url)) return;
-            _otaUrl = url;
-            SetString("ota_url", _otaUrl);
             Save();
         }
 

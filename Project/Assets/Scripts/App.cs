@@ -536,7 +536,7 @@ namespace XiaoZhi.Unity
             var macAddr = AppSettings.Instance.GetMacAddress();
             var boardName = Config.GetBoardName();
             _ota = new OTA();
-            _ota.SetCheckVersionUrl(AppSettings.Instance.GetOTAUrl());
+            _ota.SetCheckVersionUrl(Config.Instance.OtaVersionUrl);
             _ota.SetHeader("Device-Id", macAddr);
             _ota.SetHeader("Accept-Language", "zh-CN");
             _ota.SetHeader("User-Agent", $"{boardName}/{Config.GetVersion()}");

@@ -143,6 +143,8 @@ namespace XiaoZhi.Unity
 
         [JsonProperty("ACTIVATION_URL")] public string ActivationURL { get; private set; }
         
-        [JsonProperty("CHARACTER_NAME")] public string CharacterName { get; private set; }
+        [JsonProperty("VRM_CHARACTER_MODEL")] public string[] VRMCharacterModels { get; private set; }
+        
+        [JsonProperty("VRM_CHARACTER_NAME")] public string[] VRMCharacterNames { get; private set; }
     }
 }

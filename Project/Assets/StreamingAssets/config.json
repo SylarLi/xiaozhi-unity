@@ -9,7 +9,8 @@
     "SERVER_INPUT_SAMPLE_RATE": 16000,
     "AUDIO_INPUT_SAMPLE_RATE": 16000,
     "AUDIO_OUTPUT_SAMPLE_RATE": 24000,
-    "CHARACTER_NAME": "AosBrother",
+    "VRM_CHARACTER_MODEL": ["Ao/CombatUniform", "Ao/Brother"],
+    "VRM_CHARACTER_NAME": ["Ao with combat uniform", "Ao's Brother"],
 
     "KEYWORD_SPOTTER_MODEL_CONFIG_TRANSDUCER_ENCODER": "sherpa-onnx/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01/encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx",
     "KEYWORD_SPOTTER_MODEL_CONFIG_TRANSDUCER_DECODER": "sherpa-onnx/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01/decoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx",

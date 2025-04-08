@@ -53,11 +53,12 @@ namespace XiaoZhi.Unity
             _mainUI = await _context.UIManager.ShowSceneUI<VRMMainUI>();
             _mainCamera = Camera.main;
             UpdateCameraColor();
-            var modelName = Config.Instance.CharacterName;
-            var prefab = (GameObject)await Resources.LoadAsync<GameObject>($"Model/{modelName}/model");
+            var modelName = Config.Instance.VRMCharacterModels[AppSettings.Instance.GetVRMModel()];
+            var modelPath = $"VRM/{modelName}/prefab";
+            var prefab = (GameObject)await Resources.LoadAsync<GameObject>(modelPath);
             if (!prefab)
             {
-                _context.UIManager.ShowNotificationUI($"Load character failed: {modelName}").Forget();
+                _context.UIManager.ShowNotificationUI($"Load character failed: {modelPath}").Forget();
                 return false;
             }
 

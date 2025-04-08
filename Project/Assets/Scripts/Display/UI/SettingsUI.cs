@@ -9,11 +9,12 @@ namespace XiaoZhi.Unity
 {
     public class SettingsUI : BaseUI
     {
-        private TMP_InputField _inputOTAUrl;
         private TMP_InputField _inputWebSocketUrl;
         private TMP_InputField _inputWebSocketAccessToken;
         private TMP_InputField _inputCustomMacAddress;
         private Transform _listDisplayMode;
+        private GameObject _goCharacter;
+        private Transform _listCharacter;
         private Transform _listBreakMode;
         private GameObject _goKeywords;
         private TMP_InputField _inputKeywords;
@@ -33,8 +34,6 @@ namespace XiaoZhi.Unity
         protected override void OnInit()
         {
             var content = Tr.Find("Viewport/Content");
-            _inputOTAUrl = GetComponent<TMP_InputField>(content, "OTAUrl/InputField");
-            _inputOTAUrl.onDeselect.AddListener(OnChangeOTAUrl);
             _inputWebSocketUrl = GetComponent<TMP_InputField>(content, "WebSocketUrl/InputField");
             _inputWebSocketUrl.onDeselect.AddListener(OnChangeWebSocketUrl);
             _inputWebSocketAccessToken = GetComponent<TMP_InputField>(content, "WebSocketAccessToken/InputField");
@@ -42,6 +41,8 @@ namespace XiaoZhi.Unity
             _inputCustomMacAddress = GetComponent<TMP_InputField>(content, "CustomMacAddress/InputField");
             _inputCustomMacAddress.onDeselect.AddListener(OnChangeCustomMacAddress);
             _listDisplayMode = content.Find("DisplayMode/List");
+            _goCharacter = content.Find("Character").gameObject;
+            _listCharacter = content.Find("Character/List");
             _listBreakMode = content.Find("BreakMode/List");
             _inputKeywords = GetComponent<TMP_InputField>(content, "Keywords/InputField");
             _inputKeywords.onDeselect.AddListener(OnChangeKeywords);
@@ -82,6 +83,7 @@ namespace XiaoZhi.Unity
             SetLang(content, "CustomMacAddress/InputField/Text Area/Placeholder", "SettingsUI_Placeholder",
                 Lang.Strings.Get("SettingsUI_CustomMacAddress"));
             SetLang(content, "DisplayMode/Title/Text", "SettingsUI_DisplayMode");
+            SetLang(content, "Character/Title/Text", "SettingsUI_Character");
             SetLang(content, "BreakMode/Title/Text", "SettingsUI_BreakMode");
             SetLang(content, "Keywords/Title/Text", "SettingsUI_Keywords");
             SetLang(content, "Keywords/InputField/Text Area/Placeholder", "SettingsUI_Placeholder",
@@ -96,11 +98,11 @@ namespace XiaoZhi.Unity
 
         protected override async UniTask OnShow(BaseUIData data = null)
         {
-            UpdateOTAUrl();
             UpdateWebSocketUrl();
             UpdateWebSocketAccessToken();
             UpdateCustomMacAddress();
             UpdateDisplayMode();
+            UpdateCharacter();
             UpdateBreakMode();
             UpdateKeywords();
             UpdateVolume();
@@ -144,6 +146,50 @@ namespace XiaoZhi.Unity
                 if (AppSettings.Instance.GetDisplayMode() == displayMode) return;
                 AppSettings.Instance.SetDisplayMode(displayMode);
                 ShowNotificationUI(Lang.Strings.Get("SettingsUI_Modify_Tips")).Forget();
+                UpdateCharacter();
+            }
+        }
+
+        private void UpdateCharacter()
+        {
+            var displayMode = AppSettings.Instance.GetDisplayMode();
+            var showCharacter = displayMode == DisplayMode.VRM;
+            _goCharacter.SetActive(showCharacter);
+            if (!showCharacter) return;
+            switch (displayMode)
+            {
+                case DisplayMode.VRM:
+                    var values = Config.Instance.VRMCharacterModels;
+                    var names = Config.Instance.VRMCharacterNames;
+                    Tools.EnsureChildren(_listCharacter, values.Length);
+                    for (var i = 0; i < values.Length; i++)
+                    {
+                        var go = _listCharacter.GetChild(i).gameObject;
+                        go.SetActive(true);
+                        GetComponent<TextMeshProUGUI>(go.transform, "Text").text = names[i];
+                        var toggle = go.GetComponent<XToggle>();
+                        RemoveUniqueListener(toggle);
+                        toggle.isOn = i == AppSettings.Instance.GetVRMModel();
+                        AddUniqueListener(toggle, i, OnToggleCharacter);
+                    }
+
+                    break;
+            }
+        }
+
+        private void OnToggleCharacter(Toggle toggle, int index, bool isOn)
+        {
+            if (isOn)
+            {
+                var displayMode = AppSettings.Instance.GetDisplayMode();
+                switch (displayMode)
+                {
+                    case DisplayMode.VRM:
+                        if (AppSettings.Instance.GetVRMModel() == index) return;
+                        AppSettings.Instance.SetVRMModel(index);
+                        ShowNotificationUI(Lang.Strings.Get("SettingsUI_Modify_Tips")).Forget();
+                        break;
+                }
             }
         }
 
@@ -276,23 +322,6 @@ namespace XiaoZhi.Unity
             }
 
             AppSettings.Instance.SetWebSocketUrl(value);
-        }
-
-        private void UpdateOTAUrl()
-        {
-            _inputOTAUrl.text = AppSettings.Instance.GetOTAUrl();
-        }
-
-        private void OnChangeOTAUrl(string value)
-        {
-            if (!Tools.IsValidUrl(value))
-            {
-                ShowNotificationUI(Lang.Strings.Get("SettingsUI_Invalid_Url_Tips")).Forget();
-                UpdateOTAUrl();
-                return;
-            }
-
-            AppSettings.Instance.SetOTAUrl(value);
         }
     }
 }

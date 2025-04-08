@@ -24,7 +24,7 @@
     "SettingsUI_DisplayMode": "显示模式",
     "SettingsUI_DisplayMode_Emoji": "Emoji",
     "SettingsUI_DisplayMode_VRM": "VRM",
-    "SettingsUI_VRMCharacter": "VRM Character",
+    "SettingsUI_Character": "Character",
     "SettingsUI_BreakMode": "打断模式",
     "SettingsUI_BreakMode_None": "关闭",
     "SettingsUI_BreakMode_Keyword": "关键词",

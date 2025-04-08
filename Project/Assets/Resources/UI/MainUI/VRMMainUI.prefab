@@ -230,7 +230,6 @@ GameObject:
   - component: {fileID: 7188369274090757671}
   - component: {fileID: 6488043993421575893}
   - component: {fileID: 522729085272258936}
-  - component: {fileID: 3061889821919900311}
   m_Layer: 5
   m_Name: Loading
   m_TagString: Untagged
@@ -285,7 +284,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 22d2b390b1c6be2429c12bf805c7709c, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 00e193fe6f33fb34a97063e4dfd819c2, type: 3}
   m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -325,21 +324,6 @@ Animation:
   m_PlayAutomatically: 1
   m_AnimatePhysics: 0
   m_CullingType: 0
---- !u!114 &3061889821919900311
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5128723482360626009}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_EffectColor: {r: 0, g: 0, b: 0, a: 0.69803923}
-  m_EffectDistance: {x: 1, y: -1}
-  m_UseGraphicAlpha: 1
 --- !u!1001 &4208383019387443592
 PrefabInstance:
   m_ObjectHideFlags: 0
