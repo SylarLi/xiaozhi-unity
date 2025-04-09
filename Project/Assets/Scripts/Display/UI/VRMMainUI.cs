@@ -1,7 +1,7 @@
-using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,10 +12,12 @@ namespace XiaoZhi.Unity
         private RectTransform _trSet;
         private Button _btnSet;
         private GameObject _goLoading;
+        private GameObject _goChat;
+        private TextMeshProUGUI _textChat;
 
         private CancellationTokenSource _autoHideCts;
         private DeviceState _lastDeviceState;
-        
+
         public override string GetResourcePath()
         {
             return "MainUI/VRMMainUI";
@@ -36,6 +38,8 @@ namespace XiaoZhi.Unity
             _trSet = GetComponent<RectTransform>(Tr, "BtnSet");
             _trSet.GetComponent<XButton>().onClick.AddListener(() => { ShowModuleUI<SettingsUI>().Forget(); });
             GetComponent<XButton>(Tr, "ClickRole").onClick.AddListener(() => Context.App.ToggleChatState().Forget());
+            _goChat = Tr.Find("Chat").gameObject;
+            _textChat = GetComponent<TextMeshProUGUI>(Tr, "Chat/Text");
         }
 
         protected override async UniTask OnShow(BaseUIData data = null)
@@ -60,6 +64,12 @@ namespace XiaoZhi.Unity
         public void ShowLoading(bool show)
         {
             _goLoading.SetActive(show);
+        }
+
+        public void SetStatus(string status)
+        {
+            _goChat.SetActive(!string.IsNullOrEmpty(status));
+            _textChat.text = status;
         }
 
         private void OnDeviceStateUpdate(DeviceState state)

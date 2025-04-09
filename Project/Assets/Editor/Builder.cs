@@ -59,21 +59,19 @@ public static class Builder
 
     private static BuildReport BuildPlayer(BuildPlayerOptions options)
     {
-        PostProcessBuild(options.locationPathName);
-        return null;
-        // Debug.Log($"Starting build for {options.target}...");
-        // var report = BuildPipeline.BuildPlayer(options);
-        // if (report.summary.result == BuildResult.Succeeded)
-        // {
-        //     Debug.Log($"Build completed successfully at: {options.locationPathName}");
-        //     PostProcessBuild(options.locationPathName);
-        // }
-        // else
-        // {
-        //     Debug.LogError($"Build failed with {report.summary.totalErrors} errors.");
-        // }
-        //
-        // return report;
+        Debug.Log($"Starting build for {options.target}...");
+        var report = BuildPipeline.BuildPlayer(options);
+        if (report.summary.result == BuildResult.Succeeded)
+        {
+            Debug.Log($"Build completed successfully at: {options.locationPathName}");
+            PostProcessBuild(options.locationPathName);
+        }
+        else
+        {
+            Debug.LogError($"Build failed with {report.summary.totalErrors} errors.");
+        }
+        
+        return report;
     }
 
     private static void PostProcessBuild(string buildPath)

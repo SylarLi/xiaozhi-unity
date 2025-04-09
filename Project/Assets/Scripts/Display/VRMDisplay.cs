@@ -79,6 +79,7 @@ namespace XiaoZhi.Unity
 
         public void SetStatus(string status)
         {
+            _mainUI.SetStatus(status);
         }
 
         public void SetEmotion(string emotion)
@@ -89,6 +90,7 @@ namespace XiaoZhi.Unity
 
         public void SetChatMessage(ChatRole role, string content)
         {
+            
         }
 
         private void OnThemeChanged(ThemeSettings.Theme theme)

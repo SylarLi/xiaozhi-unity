@@ -1,6 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -83,6 +84,7 @@ namespace XiaoZhi.Unity
                 return;
             }
 
+            await CheckInternetReachability();
             if (!await CheckNewVersion(_cts.Token))
             {
                 SetDeviceState(DeviceState.Error);
@@ -104,7 +106,7 @@ namespace XiaoZhi.Unity
             if (!_codec.GetInputDevice(out _))
             {
                 SetDeviceState(DeviceState.Error);
-                _display.SetChatMessage(ChatRole.System, Lang.Strings.Get("MIC_NOT_FOUND_TIPS"));
+                _display.SetStatus(Lang.Strings.Get("STATE_MIC_NOT_FOUND"));
                 return;
             }
 
@@ -120,6 +122,7 @@ namespace XiaoZhi.Unity
             {
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
                 InputAudio();
+                CheckProtocol();
             }
         }
 
@@ -237,14 +240,26 @@ namespace XiaoZhi.Unity
             await _protocol.SendAbortSpeaking(reason);
         }
 
+        private async UniTask<bool> OpenAudioChannel()
+        {
+            if (_protocol.IsAudioChannelOpened()) return true;
+            SetDeviceState(DeviceState.Connecting);
+            if (!await _protocol.OpenAudioChannel())
+            {
+                SetDeviceState(DeviceState.Idle);
+                _context.UIManager.ShowNotificationUI(Lang.Strings.Get("Connect_Failed_Tips")).Forget();
+                return false;
+            }
+
+            return true;
+        }
+
         public async UniTaskVoid ToggleChatState()
         {
             switch (_deviceState)
             {
                 case DeviceState.Idle:
-                    SetDeviceState(DeviceState.Connecting);
-                    if (!await _protocol.OpenAudioChannel())
-                        return;
+                    if (!await OpenAudioChannel()) return;
                     _keepListening = true;
                     await _protocol.SendStartListening(ListenMode.AutoStop);
                     SetDeviceState(DeviceState.Listening);
@@ -274,23 +289,20 @@ namespace XiaoZhi.Unity
             }
 
             _keepListening = false;
-            if (_deviceState == DeviceState.Idle)
+            switch (_deviceState)
             {
-                if (!_protocol.IsAudioChannelOpened())
+                case DeviceState.Idle:
                 {
-                    SetDeviceState(DeviceState.Connecting);
-                    if (!await _protocol.OpenAudioChannel())
-                        return;
+                    if (!await OpenAudioChannel()) return;
+                    await _protocol.SendStartListening(ListenMode.ManualStop);
+                    SetDeviceState(DeviceState.Listening);
+                    break;
                 }
-
-                await _protocol.SendStartListening(ListenMode.ManualStop);
-                SetDeviceState(DeviceState.Listening);
-            }
-            else if (_deviceState == DeviceState.Speaking)
-            {
-                await AbortSpeaking(AbortReason.None);
-                await _protocol.SendStartListening(ListenMode.ManualStop);
-                SetDeviceState(DeviceState.Listening);
+                case DeviceState.Speaking:
+                    await AbortSpeaking(AbortReason.None);
+                    await _protocol.SendStartListening(ListenMode.ManualStop);
+                    SetDeviceState(DeviceState.Listening);
+                    break;
             }
         }
 
@@ -396,13 +408,7 @@ namespace XiaoZhi.Unity
                     {
                         case DeviceState.Idle:
                         {
-                            SetDeviceState(DeviceState.Connecting);
-                            if (!await _protocol.OpenAudioChannel())
-                            {
-                                SetDeviceState(DeviceState.Idle);
-                                return;
-                            }
-
+                            if (!await OpenAudioChannel()) return;
                             await _protocol.SendWakeWordDetected(wakeWord);
                             _keepListening = true;
                             SetDeviceState(DeviceState.Listening);
@@ -594,6 +600,24 @@ namespace XiaoZhi.Unity
             }
 
             return success;
+        }
+
+        private async UniTask CheckInternetReachability()
+        {
+            if (Application.internetReachability == NetworkReachability.NotReachable)
+                _display.SetStatus(Lang.Strings.Get("State_Internet_Break"));
+            while (Application.internetReachability == NetworkReachability.NotReachable)
+                await UniTask.Delay(1000);
+        }
+
+        private void CheckProtocol()
+        {
+            if (_deviceState is DeviceState.Listening or DeviceState.Speaking &&
+                _protocol?.IsAudioChannelOpened() != true)
+            {
+                SetDeviceState(DeviceState.Idle);
+                _context.UIManager.ShowNotificationUI(Lang.Strings.Get("CONNECTION_CLOSED_TIPS")).Forget();
+            }
         }
     }
 }

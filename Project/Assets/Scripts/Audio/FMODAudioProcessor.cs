@@ -18,9 +18,10 @@ public class FMODAudioProcessor : IDisposable
         config.Echo.Enabled = true;
         config.Echo.MobileMode = true;
         config.NoiseSuppress.Enabled = true;
-        config.NoiseSuppress.NoiseLevel = WebRTCAPMWrapper.Config.NoiseSuppression.Level.VeryHigh;
+        config.NoiseSuppress.NoiseLevel = WebRTCAPMWrapper.Config.NoiseSuppression.Level.High;
         config.HighPass.Enabled = true;
         config.HighPass.ApplyInFullBand = true;
+        config.TransientSuppress.Enabled = true;
         WebRTCAPMWrapper.WebRTC_APM_ApplyConfig(_handle, ref config);
     }
 

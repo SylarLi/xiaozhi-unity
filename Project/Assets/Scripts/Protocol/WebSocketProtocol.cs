@@ -33,7 +33,6 @@ namespace XiaoZhi.Unity
 
         public void Configure()
         {
-            
         }
 
         public override async UniTask<bool> OpenAudioChannel()
@@ -49,11 +48,13 @@ namespace XiaoZhi.Unity
             if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(token) ||
                 string.IsNullOrEmpty(deviceId) || string.IsNullOrEmpty(clientId))
             {
-                throw new InvalidOperationException("连接失败: 请检查配置");
+                Debug.LogError("连接失败: 请检查配置");
+                return false;
             }
 
             await CloseWebSocket();
 
+            _errorOccurred = false;
             _webSocket = new ClientWebSocket();
             _cancellationTokenSource = new CancellationTokenSource();
             _helloTaskCompletionSource = new TaskCompletionSource<bool>();
@@ -65,7 +66,16 @@ namespace XiaoZhi.Unity
             _webSocket.Options.SetRequestHeader("Client-Id", clientId);
 
             // 异步连接
-            await _webSocket.ConnectAsync(new Uri(url), _cancellationTokenSource.Token);
+            try
+            {
+                await _webSocket.ConnectAsync(new Uri(url), _cancellationTokenSource.Token);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e);
+                return false;
+            }
+            
             _isConnected = true;
             Debug.Log("WebSocket连接已打开");
             StartReceiving().Forget();
@@ -85,7 +95,8 @@ namespace XiaoZhi.Unity
             await SendJson(helloMessage);
             await Task.WhenAny(_helloTaskCompletionSource.Task, Task.Delay(10000));
             if (_helloTaskCompletionSource.Task.IsCompletedSuccessfully) return true;
-            throw new TimeoutException("连接失败: 连接超时");
+            Debug.LogError("连接失败: 连接超时");
+            return false;
         }
 
         private async UniTaskVoid StartReceiving()
@@ -176,7 +187,12 @@ namespace XiaoZhi.Unity
 
         protected override async UniTask SendJson(object data)
         {
-            if (!_isConnected) throw new InvalidOperationException("WebSocket is not connected");
+            if (!_isConnected || _webSocket.State != WebSocketState.Open)
+            {
+                SetError("WebSocket is not connected");
+                return;
+            }
+
             var jsonStr = JsonConvert.SerializeObject(data);
             var bytes = Encoding.UTF8.GetBytes(jsonStr);
             await _webSocket.SendAsync(
@@ -189,7 +205,11 @@ namespace XiaoZhi.Unity
         public override async UniTask SendAudio(ReadOnlyMemory<byte> audioData)
         {
             if (!_isConnected || !_isAudioChannelOpen || _webSocket.State != WebSocketState.Open)
+            {
+                SetError("WebSocket is not connected");
                 return;
+            }
+
             await _webSocket.SendAsync(
                 audioData,
                 WebSocketMessageType.Binary,
@@ -238,7 +258,7 @@ namespace XiaoZhi.Unity
 
         public override bool IsAudioChannelOpened()
         {
-            return _isConnected && _isAudioChannelOpen && !_errorOccurred && !IsTimeout();
+            return _isConnected && _isAudioChannelOpen && !_errorOccurred && !IsTimeout() && _webSocket.State == WebSocketState.Open;
         }
 
         private bool IsTimeout()

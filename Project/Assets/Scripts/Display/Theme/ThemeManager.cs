@@ -53,7 +53,7 @@ namespace XiaoZhi.Unity
                 }
             }
             
-            _theme = (ThemeSettings.Theme)PrefSettings.GetInt("theme", (int)_settings.DefaultTheme);
+            _theme = (ThemeSettings.Theme)PrefSettings.GetInt("app_theme", (int)_settings.DefaultTheme);
         }
 
         public static void SetTheme(ThemeSettings.Theme theme)
@@ -61,7 +61,7 @@ namespace XiaoZhi.Unity
             if (_theme != theme)
             {
                 _theme = theme;
-                PrefSettings.SetInt("theme", (int)_theme);
+                PrefSettings.SetInt("app_theme", (int)_theme);
                 PrefSettings.Save();
                 OnThemeChanged?.Invoke(theme);
                 Canvas.ForceUpdateCanvases();

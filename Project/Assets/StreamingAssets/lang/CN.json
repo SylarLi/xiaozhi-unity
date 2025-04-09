@@ -10,7 +10,10 @@
     "STATE_LISTENING": "聆听中",
     "STATE_SPEAKING": "说话中",
     "STATE_ERROR": "错误",
-    "MIC_NOT_FOUND_TIPS": "麦克风未找到。",
+    "STATE_MIC_NOT_FOUND": "麦克风未找到。",
+    "State_Internet_Break": "网络已断开",
+    "CONNECTION_CLOSED_TIPS": "连接已断开。",
+    "Connect_Failed_Tips": "连接失败，请重试。",
 
     "SettingsUI_Title": "设置",
     "SettingsUI_Modify_Tips": "修改成功，重启后生效。",
