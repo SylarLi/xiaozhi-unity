@@ -92,4 +92,4 @@ MonoBehaviour:
   - Theme: 1
     Action: 4
     Color: {r: 0, g: 0, b: 0, a: 0.5882353}
-  DefaultTheme: 1
+  DefaultTheme: 0
