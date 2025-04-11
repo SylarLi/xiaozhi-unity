@@ -15,13 +15,6 @@ jobs:
         key: Library-Xiaozhi-Unity-MacOS-arm64
         restore-keys: |
           Library-Xiaozhi-Unity-
-
-    - name: Unity - Activate
-      uses: game-ci/unity-activate@v2.0.0
-      env:
-        UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-        UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-        UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
       
     - name: Unity - Builder
       uses: game-ci/unity-builder@v4.4.0
