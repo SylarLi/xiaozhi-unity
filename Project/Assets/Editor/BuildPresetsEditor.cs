@@ -1,41 +1,44 @@
 using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(BuildPresets))]
-public class BuildPresetsEditor : Editor
+namespace XiaoZhi.Unity
 {
-    private BuildPresets _buildPresets;
-    private BuildTarget _buildTarget = BuildTarget.StandaloneWindows64;
-
-    private void OnEnable()
+    [CustomEditor(typeof(BuildPresets))]
+    public class BuildPresetsEditor : UnityEditor.Editor
     {
-        _buildPresets = (BuildPresets)target;
-    }
+        private BuildPresets _buildPresets;
+        private BuildTarget _buildTarget = BuildTarget.StandaloneWindows64;
 
-    public override void OnInspectorGUI()
-    {
-        serializedObject.Update();
-
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("Debug"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("OutputPath"));
-
-        if (_buildTarget == BuildTarget.Android)
+        private void OnEnable()
         {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Android Settings", EditorStyles.boldLabel);
-            var androidPreset = serializedObject.FindProperty("AndroidPreset");
-            EditorGUILayout.PropertyField(androidPreset.FindPropertyRelative("KeystorePath"));
-            EditorGUILayout.PropertyField(androidPreset.FindPropertyRelative("KeystorePassword"));
-            EditorGUILayout.PropertyField(androidPreset.FindPropertyRelative("KeyAliasName"));
-            EditorGUILayout.PropertyField(androidPreset.FindPropertyRelative("KeyAliasPassword"));
+            _buildPresets = (BuildPresets)target;
         }
 
-        serializedObject.ApplyModifiedProperties();
+        public override void OnInspectorGUI()
+        {
+            serializedObject.Update();
 
-        EditorGUILayout.Space();
-        EditorGUILayout.BeginHorizontal();
-        _buildTarget = (BuildTarget)EditorGUILayout.EnumPopup("Build Target", _buildTarget);
-        if (GUILayout.Button("Build", GUILayout.Width(200))) Builder.Build(_buildPresets, _buildTarget);
-        EditorGUILayout.EndHorizontal();
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("Debug"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("OutputPath"));
+
+            if (_buildTarget == BuildTarget.Android)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Android Settings", EditorStyles.boldLabel);
+                var androidPreset = serializedObject.FindProperty("AndroidPreset");
+                EditorGUILayout.PropertyField(androidPreset.FindPropertyRelative("KeystorePath"));
+                EditorGUILayout.PropertyField(androidPreset.FindPropertyRelative("KeystorePassword"));
+                EditorGUILayout.PropertyField(androidPreset.FindPropertyRelative("KeyAliasName"));
+                EditorGUILayout.PropertyField(androidPreset.FindPropertyRelative("KeyAliasPassword"));
+            }
+
+            serializedObject.ApplyModifiedProperties();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginHorizontal();
+            _buildTarget = (BuildTarget)EditorGUILayout.EnumPopup("Build Target", _buildTarget);
+            if (GUILayout.Button("Build", GUILayout.Width(200))) Builder.Build(_buildPresets, _buildTarget);
+            EditorGUILayout.EndHorizontal();
+        }
     }
 }
