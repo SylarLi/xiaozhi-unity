@@ -17,9 +17,7 @@ jobs:
           Library-Xiaozhi-Unity-
 
     - name: Unity - Activate
-      uses: game-ci/unity-activate@v2.0.0
-      with:
-        unityVersion: 2022.3.59f1
+      uses: game-ci/unity-activate@v2.0.0        
       
     - name: Unity - Builder
       uses: game-ci/unity-builder@v4.4.0
