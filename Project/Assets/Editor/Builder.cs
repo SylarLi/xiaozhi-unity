@@ -39,12 +39,13 @@ namespace XiaoZhi.Unity
 
         private static string GetBuildPath()
         {
-            var buildPath = Path.Combine(_buildPresets.OutputPath, Enum.GetName(typeof(BuildTarget), _buildTarget)!);
+            var buildPath = Path.Combine(_buildPresets.OutputPath, _buildTarget.ToString());
             if (!Directory.Exists(buildPath)) Directory.CreateDirectory(buildPath);
             var buildName = _buildTarget switch
             {
                 BuildTarget.StandaloneWindows64 => $"{PlayerSettings.productName}.exe",
-                BuildTarget.Android => $"{PlayerSettings.productName}.apk",
+                BuildTarget.Android => $"{PlayerSettings.productName}-${_buildTarget}.apk",
+                BuildTarget.StandaloneOSX => $"{PlayerSettings.productName}.dmg",
                 _ => throw new ArgumentOutOfRangeException()
             };
             return Path.Combine(buildPath, buildName);
