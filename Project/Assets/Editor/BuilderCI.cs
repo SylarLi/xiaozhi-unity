@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
-using UnityEngine;
 
 namespace XiaoZhi.Unity
 {
@@ -15,12 +14,12 @@ namespace XiaoZhi.Unity
         public static void BuildCI()
         {
             var options = GetValidatedOptions();
-            // var buildTarget = (BuildTarget) Enum.Parse(typeof(BuildTarget), options["buildTarget"]);
-            // var buildPresets = AssetDatabase.LoadAssetAtPath<BuildPresets>(DefaultPresets);
-            // buildPresets.Debug = false;
-            // var buildReport = Build(buildPresets, buildTarget);
-            // ReportSummary(buildReport.summary);
-            // ExitWithResult(buildReport.summary.result);
+            var buildTarget = (BuildTarget) Enum.Parse(typeof(BuildTarget), options["buildTarget"]);
+            var buildPresets = AssetDatabase.LoadAssetAtPath<BuildPresets>(DefaultPresets);
+            buildPresets.Debug = false;
+            var buildReport = Build(buildPresets, buildTarget);
+            ReportSummary(buildReport.summary);
+            ExitWithResult(buildReport.summary.result);
         }
 
         private static Dictionary<string, string> GetValidatedOptions()
@@ -42,24 +41,6 @@ namespace XiaoZhi.Unity
             {
                 Console.WriteLine($"{buildTarget} is not a defined {nameof(BuildTarget)}");
                 EditorApplication.Exit(121);
-            }
-
-            if (!validatedOptions.TryGetValue("customBuildPath", out var _))
-            {
-                Console.WriteLine("Missing argument -customBuildPath");
-                EditorApplication.Exit(130);
-            }
-
-            const string defaultCustomBuildName = "TestBuild";
-            if (!validatedOptions.TryGetValue("customBuildName", out var customBuildName))
-            {
-                Console.WriteLine($"Missing argument -customBuildName, defaulting to {defaultCustomBuildName}.");
-                validatedOptions.Add("customBuildName", defaultCustomBuildName);
-            }
-            else if (customBuildName == "")
-            {
-                Console.WriteLine($"Invalid argument -customBuildName, defaulting to {defaultCustomBuildName}.");
-                validatedOptions.Add("customBuildName", defaultCustomBuildName);
             }
 
             return validatedOptions;

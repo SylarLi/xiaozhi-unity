@@ -1,9 +1,9 @@
-name: Build
+name: build-windows-x64
 on:
   workflow_dispatch:
 jobs:
-  buildForMacOS:
-    runs-on: macos-latest
+  build:
+    runs-on: windows-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v4.2.2
@@ -12,9 +12,9 @@ jobs:
       uses: actions/cache@v4.2.3
       with:
         path: Project/Library
-        key: Library-Xiaozhi-Unity-MacOS-arm64
+        key: library-xiaozhi-unity-windows-x64
         restore-keys: |
-          Library-Xiaozhi-Unity-
+          library-xiaozhi-unity-
       
     - name: Unity - Builder
       uses: game-ci/unity-builder@v4.4.0
@@ -23,13 +23,13 @@ jobs:
         UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
         UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
       with:
-        targetPlatform: StandaloneOSX
+        targetPlatform: StandaloneWindows64
         projectPath: Project
         buildMethod: XiaoZhi.Unity.Builder.BuildCI
       
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.6.2
       with:
-        name: MacOS-arm64
-        path: Build
+        name: windows-x64
+        path: Project/Builds/StandaloneWindows64
         

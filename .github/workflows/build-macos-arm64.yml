@@ -1,0 +1,35 @@
+name: build-macos-arm64
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4.2.2
+
+    - name: Cache for faster build
+      uses: actions/cache@v4.2.3
+      with:
+        path: Project/Library
+        key: library-xiaozhi-unity-macos-x64
+        restore-keys: |
+          library-xiaozhi-unity-
+      
+    - name: Unity - Builder
+      uses: game-ci/unity-builder@v4.4.0
+      env:
+        UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+        UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+      with:
+        targetPlatform: StandaloneOSX
+        projectPath: Project
+        buildMethod: XiaoZhi.Unity.Builder.BuildCI
+      
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        name: macos-arm64
+        path: Build/StandaloneOSX
+        
