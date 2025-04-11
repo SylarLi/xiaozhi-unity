@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 jobs:
   release:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v4.2.2
@@ -15,7 +15,6 @@ jobs:
         key: Library-Xiaozhi-Unity-Windows-x64
         restore-keys: |
           Library-Xiaozhi-Unity-
-          Library-
 
     - name: Unity - Activate
       uses: game-ci/unity-activate@v2.0.0
