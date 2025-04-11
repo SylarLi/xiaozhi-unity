@@ -30,6 +30,6 @@ jobs:
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.6.2
       with:
-        name: xiaozhi.unity-Android.apk
+        name: xiaozhi.unity-Android.zip
         path: Project/Builds/Android/xiaozhi.unity.apk
         

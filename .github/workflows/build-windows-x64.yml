@@ -1,3 +1,4 @@
+# Github hosted runners have limitation of storage, CI/CD for unity is not avaliable for free users.
 name: build-windows-x64
 on:
   workflow_dispatch:
